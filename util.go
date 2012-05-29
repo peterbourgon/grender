@@ -1,53 +1,19 @@
 package main
 
 import (
-	"os"
-	"path/filepath"
 	"path"
+	"path/filepath"
 	"strings"
 	. "github.com/peterbourgon/bonus/xlog"
 )
-
-type Node struct {
-	file	[]string
-	subdirs	[]Node
-}
-
-type Context map[string]interface{}
-
-func GetContext(sourceRoot, templateRoot, pageName string) Context {
-	ctx := Context{}
-	w := func(path string, info os.FileInfo, err error) error {
-		Debugf("• %s", path)
-		if info.IsDir() {
-
-		}
-		return nil
-	}
-	Debugf("walking %s", sourceRoot)
-	if err := filepath.Walk(sourceRoot, w); err != nil {
-		Problemf("Walk: %s", err)
-	}
-	return ctx
-}
 
 func ShouldDescend(dir, pageFile string) bool {
 	d, pf := TokenizePath(dir), TokenizePath(pageFile)
 	if len(d) >= len(pf) {
 		return false
 	}
-	if equal(d[:len(pf)], pf) {
+	if equal(pf[:len(d)], d) {
 		return true
-	}
-	return false
-}
-
-func ShouldMerge(file, pageFile string) bool {
-	if StripExtension(file) == StripExtension(pageFile) {
-		return true	// foo/bar/baz.json + foo/bar/baz.page => merge
-	}
-	if path.Base(file) == "_.json" {
-		return true	// global environment (we only walk to the ones that apply)
 	}
 	return false
 }
@@ -55,16 +21,16 @@ func ShouldMerge(file, pageFile string) bool {
 func Subpath(rootDir, file string) string {
 	d, err := filepath.Abs(rootDir)
 	if err != nil {
-		Problemf("PathFor(%s, %s): %s", rootDir, file, err)
+		Problemf("Subpath(%s, %s): %s", rootDir, file, err)
 		return ""
 	}
 	f, err := filepath.Abs(file)
 	if err != nil {
-		Problemf("PathFor(%s, %s): %s", rootDir, file, err)
+		Problemf("Subpath(%s, %s): %s", rootDir, file, err)
 		return ""
 	}
 	if strings.Index(f, d) != 0 {
-		Problemf("PathFor(%s, %s): file not under directory", rootDir, file)
+		Problemf("Subpath(%s, %s): file not under directory", rootDir, file)
 		return ""
 	}
 	return f[len(d)+1:]
