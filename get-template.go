@@ -17,7 +17,7 @@ func GetTemplate(sourceRoot, templateRoot, pageFile string) (string, error) {
 	// pageFile is within sourceRoot
 	pseudoPageFile := Rehome(pageFile, sourceRoot, templateRoot)
 	Debugf("Rehome(%s, %s, %s) -> %s", pageFile, sourceRoot, templateRoot, pseudoPageFile)
-	templateFile := ""
+	best := ""
 	w := func(path string, info os.FileInfo, err error) error {
 		Debugf("• %s (%v)", path, err)
 		if err != nil {
@@ -34,10 +34,13 @@ func GetTemplate(sourceRoot, templateRoot, pageFile string) (string, error) {
 			return filepath.SkipDir
 		}
 		Debugf("ValidTemplate(%s, %s) = %v", path, pseudoPageFile, ValidTemplate(path, pseudoPageFile))
-		if ValidTemplate(path, pseudoPageFile) {
-			Debugf("  + VALID")
-			templateFile = path
-			return nil
+		if ValidTemplate(path, pseudoPageFile) && len(path) > len(best) {
+			// the more specific template has a longer path by definition
+			if len(path) > len(best) {
+				Debugf("  + VALID+CHOSEN")
+				best = path
+				return nil
+			}
 		}
 		Debugf("  · IGNORE")
 		return nil
@@ -46,11 +49,11 @@ func GetTemplate(sourceRoot, templateRoot, pageFile string) (string, error) {
 	if err := filepath.Walk(templateRoot, w); err != nil {
 		Problemf("Walk: %s", err)
 	}
-	if templateFile == "" {
+	if best == "" {
 		return "", fmt.Errorf("no matching template found")
 	}
-	Debugf("%s: chose %s", pageFile, templateFile)
-	return templateFile, nil
+	Debugf("%s: chose %s", pageFile, best)
+	return best, nil
 }
 
 func ValidTemplate(file, pageFile string) bool {
