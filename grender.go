@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"github.com/peterbourgon/bonus/xlog"
-	// "github.com/hoisie/mustache"
-	// "fmt"
+	"github.com/hoisie/mustache"
+	"strings"
+	"os"
+	"fmt"
 )
 
 var (
@@ -15,18 +17,34 @@ var (
 	temp         *string = flag.String("temp", "", "temporary flag")
 )
 
+const (
+	OutputExtension = ".html"
+)
+
 func init() {
 	flag.Parse()
 	xlog.Initialize(*debug)
 }
 
 func main() {
-	page := *temp
-	ctx := GetContext(*sourceDir, page)
-	templateFile, err := GetTemplate(*sourceDir, *templatesDir, page)
-	if err != nil {
-		xlog.Fatalf("%s: %s", *temp, err)
+	for _, page := range GetPages(*sourceDir) {
+		ctx := GetContext(*sourceDir, page)
+		templateFile, err := GetTemplate(*sourceDir, *templatesDir, page)
+		if err != nil {
+			xlog.Problemf("%s: %s", page, err)
+			continue
+		}
+		tmpl := mustache.RenderFile(templateFile, ctx)
+		// TODO make a function
+		outputFile := strings.Replace(page, *sourceDir, *outputDir, 1)
+		outputFile = strings.Replace(outputFile, PageExtension, OutputExtension, 1)
+		f, err := os.Create(outputFile)
+		if err != nil {
+			xlog.Problemf("%s: %s", outputFile, err)
+			continue
+		}
+		fmt.Fprintf(f, tmpl)
+		xlog.Infof("%s: wrote %d bytes to %s", page, len(tmpl), outputFile)
+		f.Close()
 	}
-	xlog.Debugf("context:\n\n%v\n\n", ctx)
-	xlog.Debugf("%s: using template %s", *temp, templateFile)
 }
