@@ -6,6 +6,7 @@ import (
 	"github.com/hoisie/mustache"
 	"strings"
 	"os"
+	"path"
 	"fmt"
 )
 
@@ -28,6 +29,7 @@ func init() {
 
 func main() {
 	for _, page := range GetPages(*sourceDir) {
+		xlog.Debugf("parsing %s", page)
 		ctx := GetContext(*sourceDir, page)
 		templateFile, err := GetTemplate(*sourceDir, *templatesDir, page)
 		if err != nil {
@@ -35,15 +37,21 @@ func main() {
 			continue
 		}
 		tmpl := mustache.RenderFile(templateFile, ctx)
+
 		// TODO make a function
 		outputFile := strings.Replace(page, *sourceDir, *outputDir, 1)
 		outputFile = strings.Replace(outputFile, PageExtension, OutputExtension, 1)
+		if err := os.MkdirAll(path.Dir(outputFile), 0755); err != nil {
+			xlog.Problemf("%s: %s", outputFile, err)
+			continue
+		}
 		f, err := os.Create(outputFile)
 		if err != nil {
 			xlog.Problemf("%s: %s", outputFile, err)
 			continue
 		}
 		fmt.Fprintf(f, tmpl)
+
 		xlog.Infof("%s: wrote %d bytes to %s", page, len(tmpl), outputFile)
 		f.Close()
 	}
