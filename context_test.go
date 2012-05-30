@@ -111,8 +111,7 @@ func TestMergeJSON(t *testing.T) {
 
 func TestMergeMarkdown(t *testing.T) {
 	m := map[string]Context{
-		// https://github.com/knieriem/markdown/issues/5
-		// ``:  Context{MarkdownKey: ""}, // TODO ^^^
+		``:  Context{MarkdownKey: "\n"},
 		md1: Context{MarkdownKey: html1},
 	}
 	for body, expected := range m {
@@ -124,7 +123,6 @@ func TestMergeMarkdown(t *testing.T) {
 		}
 		expectedStr := fmt.Sprintf("%v", expected)
 		gotStr := fmt.Sprintf("%v", got)
-		t.Logf("%s: expected '%s', got '%s'", body, expectedStr, gotStr)
 		if expectedStr != gotStr {
 			t.Errorf("%s: expected '%s', got '%s'", body, expectedStr, gotStr)
 		}
