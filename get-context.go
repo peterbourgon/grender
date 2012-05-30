@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"encoding/json"
+	"io/ioutil"
 	"path/filepath"
 	"path"
 	"strings"
@@ -14,6 +15,7 @@ import (
 const (
 	JSONExtension     = ".json"
 	MarkdownExtension = ".md"
+	RawdataExtension  = ".rawdata"
 	PageExtension     = ".page"
 	MarkdownKey       = "markdown"
 )
@@ -38,6 +40,7 @@ func GetContext(sourceRoot, pageFile string) Context {
 		}
 		if ShouldMerge(path, pageFile) {
 			Debugf("  + MERGE")
+			Infof("%s: merging data from %s", pageFile, path)
 			Merge(path, ctx)
 			return nil
 		}
@@ -52,18 +55,29 @@ func GetContext(sourceRoot, pageFile string) Context {
 }
 
 func ShouldMerge(file, pageFile string) bool {
-	switch path.Ext(file) {
+	Debugf("### ShouldMerge('%s', '%s')", file, pageFile)
+	fullName, ext := SplitAtExtension(file)
+	name := ""
+	switch ext {
 	case JSONExtension, MarkdownExtension:
-		break
+		name = path.Base(fullName)
+	case RawdataExtension:
+		// these have the special naming sceheme: baz.keyname.rawdata
+		// so to pass the below test, we need to strip the 1st extension
+		name, _ = SplitAtExtension(path.Base(fullName))
 	default:
+		Debugf("### ShouldMerge('%s', '%s') NO 1", file, pageFile)
 		return false
 	}
-	if StripExtension(file) == StripExtension(pageFile) {
+	if fullName == StripExtension(pageFile) {
+		Debugf("### ShouldMerge('%s', '%s') YES 1", file, pageFile)
 		return true // foo/bar/baz.json + foo/bar/baz.page => merge
 	}
-	if path.Base(file) == "_"+JSONExtension {
-		return true // global environment (we only walk to the ones that apply)
+	if name == "_" {
+		Debugf("### ShouldMerge('%s', '%s') YES 2", file, pageFile)
+		return true
 	}
+	Debugf("### ShouldMerge('%s', '%s') NO X fullName='%s'", file, pageFile, name)
 	return false
 }
 
@@ -73,6 +87,8 @@ func Merge(file string, ctx Context) {
 		mergeJSON(file, ctx)
 	case MarkdownExtension:
 		mergeMarkdown(file, ctx)
+	case RawdataExtension:
+		mergeRawdata(file, ctx)
 	default:
 		Problemf("%s: unknown type; not merging", file)
 	}
@@ -101,4 +117,27 @@ func mergeMarkdown(file string, ctx Context) {
 	b := bytes.Buffer{}
 	p.Markdown(f, markdown.ToHTML(&b))
 	ctx[MarkdownKey] = b.String()
+}
+
+func mergeRawdata(file string, ctx Context) {
+	f, err := os.Open(file)
+	if err != nil {
+		Problemf("%s: %s", file, err)
+		return
+	}
+	defer f.Close()
+	b1, e1 := SplitAtExtension(file)
+	if e1 != RawdataExtension {
+		Problemf("%s: %s != %s", file, e1, RawdataExtension)
+		return
+	}
+	_, e2 := SplitAtExtension(b1)
+	key := strings.TrimLeft(e2, ".")
+	buf, err := ioutil.ReadAll(f)
+	if err != nil {
+		Problemf("%s: %s", file, err)
+		return
+	}
+	Debugf("%s: '%s' = %d bytes", file, key, len(buf))
+	ctx[key] = string(buf)
 }

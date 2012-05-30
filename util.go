@@ -51,8 +51,15 @@ func TokenizePath(s string) []string {
 	return a
 }
 
+func SplitAtExtension(file string) (string, string) {
+	extLen := len(path.Ext(file))
+	dotPos := len(file) - extLen
+	return file[:dotPos], file[dotPos:]
+}
+
 func StripExtension(file string) string {
-	return file[:len(file)-len(path.Ext(file))]
+	base, _ := SplitAtExtension(file)
+	return base
 }
 
 func equal(a, b []string) bool {

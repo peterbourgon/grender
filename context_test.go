@@ -7,6 +7,21 @@ import (
 	"fmt"
 )
 
+func TestSplitAtExtension(t *testing.T) {
+	m := map[string][]string{
+		"foo.txt":        []string{"foo", ".txt"},
+		"a.b.c":          []string{"a.b", ".c"},
+		"/path/to/a.foo": []string{"/path/to/a", ".foo"},
+	}
+	for file, expected := range m {
+		base, ext := SplitAtExtension(file)
+		got := []string{base, ext}
+		if !equal(got, expected) {
+			t.Errorf("%s: expected '%s', got '%s'", file, expected, got)
+		}
+	}
+}
+
 func TestTokenizePath(t *testing.T) {
 	m := map[string][]string{
 		"/a/b/c":   []string{"a", "b", "c"},
