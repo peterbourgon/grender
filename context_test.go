@@ -95,6 +95,7 @@ func TestMergeJSON(t *testing.T) {
 	}
 	for body, expected := range m {
 		filename := writeToTempFile(t, body)
+		defer os.Remove(filename)
 		got := Context{}
 		mergeJSON(filename, got)
 		if len(expected) != len(got) {
@@ -116,6 +117,7 @@ func TestMergeMarkdown(t *testing.T) {
 	}
 	for body, expected := range m {
 		filename := writeToTempFile(t, body)
+		defer os.Remove(filename)
 		got := Context{}
 		mergeMarkdown(filename, got)
 		if len(expected) != len(got) {

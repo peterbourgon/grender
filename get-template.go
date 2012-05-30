@@ -17,7 +17,7 @@ func GetTemplate(sourceRoot, templateRoot, pageFile string) (string, error) {
 	// pageFile is within sourceRoot
 	pseudoPageFile := Rehome(pageFile, sourceRoot, templateRoot)
 	Debugf("Rehome(%s, %s, %s) -> %s", pageFile, sourceRoot, templateRoot, pseudoPageFile)
-	best := ""
+	bestTemplate, bestValidity := "", 0
 	w := func(path string, info os.FileInfo, err error) error {
 		Debugf("• %s (%v)", path, err)
 		if err != nil {
@@ -34,42 +34,44 @@ func GetTemplate(sourceRoot, templateRoot, pageFile string) (string, error) {
 			return filepath.SkipDir
 		}
 		Debugf("ValidTemplate(%s, %s) = %v", path, pseudoPageFile, ValidTemplate(path, pseudoPageFile))
-		if ValidTemplate(path, pseudoPageFile) && len(path) > len(best) {
-			// the more specific template has a longer path by definition
-			if len(path) > len(best) {
-				Debugf("  + VALID+CHOSEN")
-				best = path
+		if validity := ValidTemplate(path, pseudoPageFile); validity > 0 {
+			if validity > bestValidity {
+				Debugf("  + VALID + CHOSEN")
+				bestTemplate = path
+				bestValidity = validity
 				return nil
 			}
+			Debugf("  · VALID, NOT CHOSEN")
+			return nil
 		}
-		Debugf("  · IGNORE")
+		Debugf("  · INVALID, IGNORE")
 		return nil
 	}
 	Debugf("walking %s", templateRoot)
-	if err := filepath.Walk(templateRoot, w); err != nil {
+	if err := DepthFirstWalk(templateRoot, w); err != nil {
 		Problemf("Walk: %s", err)
 	}
-	if best == "" {
+	if bestTemplate == "" {
 		return "", fmt.Errorf("no matching template found")
 	}
-	Debugf("%s: chose %s", pageFile, best)
-	return best, nil
+	Debugf("%s: chose %s", pageFile, bestTemplate)
+	return bestTemplate, nil
 }
 
-func ValidTemplate(file, pageFile string) bool {
+func ValidTemplate(file, pageFile string) int {
 	switch path.Ext(file) {
 	case TemplateExtension:
 		break
 	default:
-		return false
+		return 0
 	}
 	if StripExtension(file) == StripExtension(pageFile) {
-		return true // foo/bar/baz.html + foo/bar/baz.page => good
+		return 2 // foo/bar/baz.html + foo/bar/baz.page => good
 	}
 	if path.Base(file) == "_"+TemplateExtension {
-		return true // global environment (we only walk to the ones that apply)
+		return 1 // global environment (we only walk to the ones that apply)
 	}
-	return false
+	return 0
 }
 
 func Rehome(pageFile, sourceRoot, templateRoot string) string {

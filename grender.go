@@ -36,23 +36,28 @@ func main() {
 			xlog.Problemf("%s: %s", page, err)
 			continue
 		}
+		xlog.Infof("%s: chose template %s", page, templateFile)
 		tmpl := mustache.RenderFile(templateFile, ctx)
-
-		// TODO make a function
-		outputFile := strings.Replace(page, *sourceDir, *outputDir, 1)
-		outputFile = strings.Replace(outputFile, PageExtension, OutputExtension, 1)
-		if err := os.MkdirAll(path.Dir(outputFile), 0755); err != nil {
-			xlog.Problemf("%s: %s", outputFile, err)
-			continue
-		}
-		f, err := os.Create(outputFile)
+		outputFile, err := WriteOutput(*sourceDir, *outputDir, page, tmpl)
 		if err != nil {
-			xlog.Problemf("%s: %s", outputFile, err)
+			xlog.Problemf("%s: %s", page, err)
 			continue
 		}
-		fmt.Fprintf(f, tmpl)
-
 		xlog.Infof("%s: wrote %d bytes to %s", page, len(tmpl), outputFile)
-		f.Close()
 	}
+}
+
+func WriteOutput(sourceDir, outputDir, page, contents string) (string, error) {
+	outputFile := strings.Replace(page, sourceDir, outputDir, 1)
+	outputFile = strings.Replace(outputFile, PageExtension, OutputExtension, 1)
+	if err := os.MkdirAll(path.Dir(outputFile), 0755); err != nil {
+		return "", err
+	}
+	f, err := os.Create(outputFile)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	fmt.Fprintf(f, contents)
+	return f.Name(), nil
 }
