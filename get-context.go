@@ -40,7 +40,7 @@ func GetContext(sourceRoot, pageFile string) Context {
 		}
 		if ShouldMerge(path, pageFile) {
 			Debugf("  + MERGE")
-			Infof("%s: merging data from %s", pageFile, path)
+			Infof("+ %s: merging data from %s", pageFile, path)
 			Merge(path, ctx)
 			return nil
 		}
@@ -140,4 +140,5 @@ func mergeRawdata(file string, ctx Context) {
 	}
 	Debugf("%s: '%s' = %d bytes", file, key, len(buf))
 	ctx[key] = string(buf)
+	Debugf("after merging %s, ctx: %v", file, ctx)
 }

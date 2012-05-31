@@ -5,7 +5,25 @@ import (
 	"path/filepath"
 	"strings"
 	. "github.com/peterbourgon/bonus/xlog"
+	"os/exec"
 )
+
+func RecursiveCopy(srcDir, dstDir string) {
+	// Command("cp", "-r", srcDir+"/*", dstDir) doesn't shell-expand the *.
+	files, err := filepath.Glob(srcDir + "/*")
+	if err != nil {
+		Problemf("%s", err)
+		return
+	}
+	for _, srcFile := range files {
+		cmd := exec.Command("cp", "-r", srcFile, dstDir)
+		err := cmd.Run()
+		if err != nil {
+			Problemf("%s: %s", strings.Join(cmd.Args, " "), err)
+			continue
+		}
+	}
+}
 
 func ShouldDescend(dir, pageFile string) bool {
 	d, pf := TokenizePath(dir), TokenizePath(pageFile)

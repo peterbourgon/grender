@@ -11,11 +11,12 @@ import (
 )
 
 var (
-	debug        *bool   = flag.Bool("debug", false, "enable debug logging")
-	templatesDir *string = flag.String("templates-dir", "_templates", "directory containing templates")
-	sourceDir    *string = flag.String("source-dir", "_source", "directory containing source")
-	outputDir    *string = flag.String("output-dir", "_output", "directory where site will be written")
-	temp         *string = flag.String("temp", "", "temporary flag")
+	debug       *bool   = flag.Bool("debug", false, "enable debug logging")
+	staticDir   *string = flag.String("static-dir", "_static", "directory containing static files copied verbatim to -output-dir")
+	templateDir *string = flag.String("template-dir", "_templates", "directory containing templates")
+	sourceDir   *string = flag.String("source-dir", "_source", "directory containing source")
+	outputDir   *string = flag.String("output-dir", "_output", "directory where site will be written")
+	temp        *string = flag.String("temp", "", "temporary flag")
 )
 
 const (
@@ -28,22 +29,23 @@ func init() {
 }
 
 func main() {
+	RecursiveCopy(*staticDir, *outputDir)
 	for _, page := range GetPages(*sourceDir) {
 		xlog.Debugf("parsing %s", page)
 		ctx := GetContext(*sourceDir, page)
-		templateFile, err := GetTemplate(*sourceDir, *templatesDir, page)
+		templateFile, err := GetTemplate(*sourceDir, *templateDir, page)
 		if err != nil {
 			xlog.Problemf("%s: %s", page, err)
 			continue
 		}
-		xlog.Infof("%s: chose template %s", page, templateFile)
+		xlog.Infof("> %s: chose template %s", page, templateFile)
 		tmpl := mustache.RenderFile(templateFile, ctx)
 		outputFile, err := WriteOutput(*sourceDir, *outputDir, page, tmpl)
 		if err != nil {
 			xlog.Problemf("%s: %s", page, err)
 			continue
 		}
-		xlog.Infof("%s: wrote %d bytes to %s", page, len(tmpl), outputFile)
+		xlog.Infof("! %s: wrote %d bytes to %s", page, len(tmpl), outputFile)
 	}
 }
 
