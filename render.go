@@ -4,7 +4,7 @@ import (
 	"github.com/hoisie/mustache"
 )
 
-func Render(templateDir, inFile string, ctx Context) ([]byte, error) {
+func RenderTemplate(templateDir, inFile string, ctx Context) ([]byte, error) {
 	// First, expand all Composition directives.
 	buf, err := ComposeTemplate(templateDir, inFile)
 	if err != nil {

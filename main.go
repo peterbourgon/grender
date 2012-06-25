@@ -2,7 +2,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"os"
+	"path/filepath"
 	"github.com/peterbourgon/bonus/xlog"
 )
 
@@ -11,9 +12,8 @@ var (
 	templateDir *string = flag.String("template-dir", "_templates", "templates directory")
 	sourceDir   *string = flag.String("source-dir", "_source", "source directory")
 	staticDir   *string = flag.String("static-dir", "_static", "static directory")
+	outputDir   *string = flag.String("output-dir", "_output", "output directory")
 )
-
-type Context map[string]interface{}
 
 func init() {
 	flag.Parse()
@@ -30,12 +30,35 @@ func init() {
 //  - somehow defaults for unspecified variables
 
 func main() {
-	ctx := map[string]interface{}{
-		"title": "Contextual title",
-	}
-	buf, err := Render(*templateDir, "index.tmpl", ctx)
+	sourceFiles, err := filepath.Glob(*sourceDir + "/*")
 	if err != nil {
-		panic(err)
+		xlog.Fatalf("%s: no source files", *sourceDir)
 	}
-	fmt.Printf("%s\n", string(buf))
+	for _, sourceFile := range sourceFiles {
+		templateFile, ctx, outputFile, err := ContextFrom(sourceFile)
+		if err != nil {
+			xlog.Problemf("%s: %s", sourceFile, err)
+			continue
+		}
+		buf, err := RenderTemplate(*templateDir, templateFile, ctx)
+		if err != nil {
+			xlog.Problemf("%s: %s", sourceFile, err)
+			continue
+		}
+		f, err := os.Create(*outputDir + "/" + outputFile)
+		if err != nil {
+			xlog.Problemf("%s: %s: %s", sourceFile, outputFile, err)
+			continue
+		}
+		defer f.Close()
+		n, err := f.Write(buf)
+		if err != nil {
+			xlog.Problemf("%s: %s: %s", sourceFile, outputFile, err)
+			continue
+		}
+		if n != len(buf) {
+			xlog.Problemf("%s: %s: %d < %d", sourceFile, outputFile, n, len(buf))
+			continue
+		}
+	}
 }
