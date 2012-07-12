@@ -33,6 +33,7 @@ func Fatalf(format string, args ...interface{}) {
 
 func init() {
 	flag.Parse()
+	log.SetFlags(0)
 }
 
 // A source file will specify
@@ -61,7 +62,7 @@ func main() {
 	if err != nil {
 		Fatalf("%s: %s", *sourceDir, err)
 	}
-	for _, sourceFile := range sourceFiles {
+	for i, sourceFile := range sourceFiles {
 		// extract context
 		templateFile, ctx, outputFile, err := ContextFrom(sourceFile)
 		if err != nil {
@@ -97,5 +98,13 @@ func main() {
 			Problemf("%s: %s: %d < %d", sourceFile, outputFile, n, len(buf))
 			continue
 		}
+
+		log.Printf(
+			" %d/%d) %s → %s OK",
+			i+1,
+			len(sourceFiles),
+			sourceFile,
+			totalOutputFile,
+		)
 	}
 }
