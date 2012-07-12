@@ -8,6 +8,7 @@ _obj
 _test
 _source
 _templates
+_static
 _output
 
 # Architecture specific extensions/prefixes
