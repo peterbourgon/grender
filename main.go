@@ -40,17 +40,25 @@ func main() {
 			xlog.Problemf("Context: %s: %s", sourceFile, err)
 			continue
 		}
+
 		buf, err := RenderTemplate(*templateDir, templateFile, ctx)
 		if err != nil {
 			xlog.Problemf("Render: %s: %s", sourceFile, err)
 			continue
 		}
-		f, err := os.Create(*outputDir + "/" + outputFile)
+
+		totalOutputFile := *outputDir + "/" + outputFile
+		if err := os.MkdirAll(filepath.Dir(totalOutputFile), 0755); err != nil {
+			xlog.Problemf("MkdirAll: %s: %s: %s", sourceFile, outputFile, err)
+			continue
+		}
+		f, err := os.Create(totalOutputFile)
 		if err != nil {
 			xlog.Problemf("Create: %s: %s: %s", sourceFile, outputFile, err)
 			continue
 		}
 		defer f.Close()
+
 		n, err := f.Write(buf)
 		if err != nil {
 			xlog.Problemf("Write: %s: %s: %s", sourceFile, outputFile, err)
