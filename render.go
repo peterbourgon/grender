@@ -19,17 +19,20 @@ func RenderTemplate(templateDir, inFile string, ctx Context) ([]byte, error) {
 	// Second, inject MarkdownKey into the ctx, from BodyKey content (if any)
 	if i, ok := ctx[BodyKey]; ok {
 		if s, ok := i.(string); ok {
-			htmlOptions := blackfriday.HTML_GITHUB_BLOCKCODE | blackfriday.HTML_USE_SMARTYPANTS
+			htmlOptions := 0
+			htmlOptions = htmlOptions | blackfriday.HTML_GITHUB_BLOCKCODE
+			htmlOptions = htmlOptions | blackfriday.HTML_USE_SMARTYPANTS
 			htmlRenderer := blackfriday.HtmlRenderer(
 				htmlOptions,
 				"", // title
 				"", // css
 			)
-			markdownOptions := blackfriday.EXTENSION_FENCED_CODE
+			mdOptions := 0
+			mdOptions = mdOptions | blackfriday.EXTENSION_FENCED_CODE
 			buf := blackfriday.Markdown(
 				[]byte(s),
 				htmlRenderer,
-				markdownOptions,
+				mdOptions,
 			)
 			ctx[MarkdownKey] = string(buf)
 		}
