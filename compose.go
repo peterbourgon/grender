@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"strings"
 	"fmt"
-	. "github.com/peterbourgon/bonus/xlog"
 )
 
 const (

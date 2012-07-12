@@ -5,21 +5,34 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"github.com/peterbourgon/bonus/xlog"
 	"strings"
+	"log"
 )
 
 var (
-	debug       *bool   = flag.Bool("debug", false, "enable debug output")
-	templateDir *string = flag.String("template-dir", "_templates", "templates directory")
-	sourceDir   *string = flag.String("source-dir", "_source", "source directory")
-	staticDir   *string = flag.String("static-dir", "_static", "static directory")
-	outputDir   *string = flag.String("output-dir", "_output", "output directory")
+	debug       = flag.Bool("debug", false, "enable debug output")
+	templateDir = flag.String("template-dir", "_templates", "templates directory")
+	sourceDir   = flag.String("source-dir", "_source", "source directory")
+	staticDir   = flag.String("static-dir", "_static", "static directory")
+	outputDir   = flag.String("output-dir", "_output", "output directory")
 )
+
+func Debugf(format string, args ...interface{}) {
+	if *debug {
+		log.Printf("DEBUG "+format, args...)
+	}
+}
+
+func Problemf(format string, args ...interface{}) {
+	log.Printf("PROBLEM "+format, args...)
+}
+
+func Fatalf(format string, args ...interface{}) {
+	log.Fatalf("FATAL "+format, args...)
+}
 
 func init() {
 	flag.Parse()
-	xlog.Initialize(*debug)
 }
 
 // A source file will specify
@@ -33,55 +46,55 @@ func init() {
 
 func main() {
 	if err := os.MkdirAll(*outputDir, 0755); err != nil {
-		xlog.Fatalf("%s: %s", *outputDir, err)
+		Fatalf("%s: %s", *outputDir, err)
 	}
 
 	// copy static
 	copyStatic := exec.Command("cp", "-r", *staticDir+"/", *outputDir+"/")
 	buf, err := copyStatic.CombinedOutput()
 	if err != nil {
-		xlog.Fatalf("copying %s: %s (%s)", *staticDir, err, strings.TrimSpace(string(buf)))
+		Fatalf("copying %s: %s (%s)", *staticDir, err, strings.TrimSpace(string(buf)))
 	}
 
 	// render source files
 	sourceFiles, err := filepath.Glob(*sourceDir + "/*")
 	if err != nil {
-		xlog.Fatalf("%s: %s", *sourceDir, err)
+		Fatalf("%s: %s", *sourceDir, err)
 	}
 	for _, sourceFile := range sourceFiles {
 		// extract context
 		templateFile, ctx, outputFile, err := ContextFrom(sourceFile)
 		if err != nil {
-			xlog.Problemf("Context: %s: %s", sourceFile, err)
+			Problemf("Context: %s: %s", sourceFile, err)
 			continue
 		}
 
 		// render using specified template
 		buf, err := RenderTemplate(*templateDir, templateFile, ctx)
 		if err != nil {
-			xlog.Problemf("Render: %s: %s", sourceFile, err)
+			Problemf("Render: %s: %s", sourceFile, err)
 			continue
 		}
 
 		// write output
 		totalOutputFile := *outputDir + "/" + outputFile
 		if err := os.MkdirAll(filepath.Dir(totalOutputFile), 0755); err != nil {
-			xlog.Problemf("MkdirAll: %s: %s: %s", sourceFile, outputFile, err)
+			Problemf("MkdirAll: %s: %s: %s", sourceFile, outputFile, err)
 			continue
 		}
 		f, err := os.Create(totalOutputFile)
 		if err != nil {
-			xlog.Problemf("Create: %s: %s: %s", sourceFile, outputFile, err)
+			Problemf("Create: %s: %s: %s", sourceFile, outputFile, err)
 			continue
 		}
 		defer f.Close()
 		n, err := f.Write(buf)
 		if err != nil {
-			xlog.Problemf("Write: %s: %s: %s", sourceFile, outputFile, err)
+			Problemf("Write: %s: %s: %s", sourceFile, outputFile, err)
 			continue
 		}
 		if n != len(buf) {
-			xlog.Problemf("%s: %s: %d < %d", sourceFile, outputFile, n, len(buf))
+			Problemf("%s: %s: %d < %d", sourceFile, outputFile, n, len(buf))
 			continue
 		}
 	}
