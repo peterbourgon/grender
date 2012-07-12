@@ -32,28 +32,28 @@ func init() {
 func main() {
 	sourceFiles, err := filepath.Glob(*sourceDir + "/*")
 	if err != nil {
-		xlog.Fatalf("%s: no source files", *sourceDir)
+		xlog.Fatalf("%s: %s", *sourceDir, err)
 	}
 	for _, sourceFile := range sourceFiles {
 		templateFile, ctx, outputFile, err := ContextFrom(sourceFile)
 		if err != nil {
-			xlog.Problemf("%s: %s", sourceFile, err)
+			xlog.Problemf("Context: %s: %s", sourceFile, err)
 			continue
 		}
 		buf, err := RenderTemplate(*templateDir, templateFile, ctx)
 		if err != nil {
-			xlog.Problemf("%s: %s", sourceFile, err)
+			xlog.Problemf("Render: %s: %s", sourceFile, err)
 			continue
 		}
 		f, err := os.Create(*outputDir + "/" + outputFile)
 		if err != nil {
-			xlog.Problemf("%s: %s: %s", sourceFile, outputFile, err)
+			xlog.Problemf("Create: %s: %s: %s", sourceFile, outputFile, err)
 			continue
 		}
 		defer f.Close()
 		n, err := f.Write(buf)
 		if err != nil {
-			xlog.Problemf("%s: %s: %s", sourceFile, outputFile, err)
+			xlog.Problemf("Write: %s: %s: %s", sourceFile, outputFile, err)
 			continue
 		}
 		if n != len(buf) {

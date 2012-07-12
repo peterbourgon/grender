@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	CompositionPrefix = "{{{"
-	CompositionSuffix = "}}}"
+	CompositionPrefix = "[["
+	CompositionSuffix = "]]"
 )
 
 func ComposeTemplate(templatesDir, filename string) ([]byte, error) {
