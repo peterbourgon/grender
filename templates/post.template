@@ -1,0 +1,7 @@
+[[pagetop.tmpl]]
+
+<h1>Index page</h1>
+
+{{{markdown}}}
+
+[[pagebottom.tmpl]]

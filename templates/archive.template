@@ -1,0 +1,9 @@
+[[pagetop.tmpl]]
+
+<h1>Archive page</h1>
+
+{{#posts}}
+<p><a href="/{{Year}}/{{Month}}/{{Day}}">{{Year}} {{Month}} {{Day}}</a> &mdash; {{Title}}</p>
+{{/posts}}
+
+[[pagebottom.tmpl]]

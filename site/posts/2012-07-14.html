@@ -1,0 +1,43 @@
+<html>
+<head>
+  <title>A message from July</title>
+</head>
+<body>
+
+<h1>Index page</h1>
+
+<p>This is the multiline body of the page, first-line.</p>
+
+<blockquote>
+<p>What do you mean?
+I was very confused.</p>
+</blockquote>
+
+<p>The second line of the multiline body of the page is here.</p>
+
+<pre lang="bash"><code>#!/bin/bash
+
+TOTAL=$#
+while (( &quot;$#&quot; )) ; do
+    let I=$TOTAL-$#
+    if [ $I -eq 0 ] ; then
+        # first command: need a new window
+        osascript -e &quot;tell application \&quot;Terminal\&quot; to \
+          do script&quot; &gt;/dev/null
+    else
+        # subsequent commands: new tab in that window
+        osascript -e &quot;tell application \&quot;System Events\&quot; to \
+          tell process \&quot;Terminal\&quot; to \
+            keystroke \&quot;t\&quot; using command down&quot; &gt;/dev/null
+    fi
+    osascript -e &quot;tell application \&quot;Terminal\&quot; to \
+      do script \&quot;$1\&quot; in selected tab of the front window&quot; &gt;/dev/null
+    shift
+done
+
+</code></pre>
+
+
+<br/>
+<p>Footer</p>
+</body></html>

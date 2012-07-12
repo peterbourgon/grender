@@ -1,0 +1,32 @@
+template: post.template
+title: Some code from April
+---
+This is the multiline body of the page, first-line.
+
+> What do you mean?
+> I was very confused.
+
+The second line of the multiline body of the page is here.
+
+```bash
+#!/bin/bash
+
+TOTAL=$#
+while (( "$#" )) ; do
+	let I=$TOTAL-$#
+	if [ $I -eq 0 ] ; then
+		# first command: need a new window
+		osascript -e "tell application \"Terminal\" to \
+		  do script" >/dev/null
+	else
+		# subsequent commands: new tab in that window
+		osascript -e "tell application \"System Events\" to \
+		  tell process \"Terminal\" to \
+		    keystroke \"t\" using command down" >/dev/null
+	fi
+	osascript -e "tell application \"Terminal\" to \
+	  do script \"$1\" in selected tab of the front window" >/dev/null
+	shift
+done
+
+```
