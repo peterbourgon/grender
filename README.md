@@ -1,11 +1,11 @@
+# Grender
 
 Grender is a static site generator. It combines source files and template files
 to produce a website.
 
+## File types
 
-# File types
-
-## Source files
+### Source files
 
 A source file contains the content of a page, plus some metadata. Content can be
 raw HTML, or some renderable markup language, like Markdown. Metadata can be
@@ -19,7 +19,7 @@ title: My sample page
 This is the **Markdown content** of my sample source file.
 ```
 
-## Template files
+### Template files
 
 A template file contains markup used to render an HTML file.
 
@@ -34,23 +34,23 @@ A template file contains markup used to render an HTML file.
 ```
 
 
-# Concepts
+## Concepts
 
-## Metadata
+### Metadata
 
 Metadata occurs at the beginning of a source file. It's delimited (terminated)
 by the `-metadata-delimiter`. It's parsed as YAML. Grender reads (consumes) a
 few specific pieces of metadata as part of its processing, but all others are
 passed to the template in the context.
 
-## Source file content
+### Source file content
 
 Source file content (everything after the `-metadata-delimiter`) is rendered
 according to the extension of the source file and placed in the context under
 the `-content-key`. An extension of `.md` implies Markdown; any other extension
 implies raw data, ie. no rendering will be performed.
 
-## Context object
+### Context (object)
 
 The context is all of the information that's given to a template, so that the
 template can be rendered to an HTML file. The context is primarily populated by
@@ -59,7 +59,7 @@ provided under the `-content-key`. It should probably be referenced in the
 template with three sets of curly braces (eg. `{{{content}}}`) so that HTML tags
 aren't escaped.
 
-## Special case: blog entries
+### Special case: blog entries
 
 Blog entries require additional, special treatment from the static site
 generator. Blog entries are organized and accessed by date. It should be
@@ -71,7 +71,7 @@ entries.
 To support these requirements, grender implements a concept called the
 **index**.
 
-## The index
+### The index
 
 To join the index, a source page should define a map called `index` in its
 metadata. That map should contain at least one string called `key`, containing a
@@ -103,7 +103,7 @@ index:
 	url: [-blog-path]/YYYY-MM-DD-title-text.[-output-extension]
 ```
 
-## Output location
+### Output location
 
 Combining a source file with a template to produce an output file is simple
 enough, but where does that output file get placed? To begin, all output files
