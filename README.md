@@ -1,84 +1,127 @@
-# grender
 
-A different take on a static site generator.
+Grender is a static site generator. It combines source files and template files
+to produce a website.
 
-# Desires
 
-Grender is designed to manage a particular kind of website. A grenderable
-(grendered?) site will
-
-* Probably have a blog section, where identially-styled "posts" or "articles"
-  are kept and organized by date.
-
-* Probably have many arbitrary content pages, which will have unique designs,
-  and be referenced by name (by path).
-
-* Definitely have a front page, probably with its own unique design, and
-  probably taking dynamic elements from other parts of the site.
-
-Using grender day-to-day should be something like this: you keep your website
-data in "source" form -- most content in Markdown, maybe some pages in raw
-HTML. That data is probably stored in a Github repository (or equivalent). To
-update your website, you add new source content, and run the `grender`
-executable, probably without any arguments. An "output" subdirectory is created
-and filled with the "compiled" version of your website.
-
-# Design concepts
-
-There are two types of input files. Source files contain content, plus limited
-metadata. Template files contain markup to render source. 
+# File types
 
 ## Source files
 
-Source files begin with a metadata section, which must end with the
-`--metadata-delimiter`. They then continue with plaintext content, likely in
-Markdown format.
+A source file contains the content of a page, plus some metadata. Content can be
+raw HTML, or some renderable markup language, like Markdown. Metadata can be
+explicitly specified, or can be deduced from other properties of the source
+file, like its basename (the filename without the extension).
 
-Source file metadata is parsed as YAML. Some predefined keys are used (and
-consumed) to control grender's behavior:
-
-* `template` - template file used to render this source file
-
-All other keys are passed directly to the templating engine.
-
-The name of the output file, and its location in the output hierarchy, is
-determined by rules. Those rules are as follows:
-
-* If a source file's basename matches the pattern `YYYY-MM-DD-title-text`, it's
-  considered a blog entry. A blog entry is rendered in the `--blog`
-  subdirectory of the `--output` path, with no directory hierarchy.
-  
-* Otherwise, a source file is considered arbitrary content. It's rendered in
-  the `--output` path with the same relative hierarchy as it has in the
-  `--source` path. 
-
-All output files are named as their source file's basename, plus the
-`--output-extension`. For example, `mypage.txt` becomes `mypage.html`.
-
-### Blog entries
-
-A "blog archive" page may wish to provide links to all blog entries in a
-particular date range. And the front-page may wish to display the N most recent
-blog entries directly inline. For this reason grender must treat blog entries
-in a special way.
-
-### Arbitrary content
-
-TODO
+```
+template: basic.template
+title: My sample page
+---
+This is the **Markdown content** of my sample source file.
+```
 
 ## Template files
 
-TODO
+A template file contains markup used to render an HTML file.
 
-# Errata
+```
+<html>
+<head><title>{{title}}</title></head>
+<body>
+<h1>Welcome to my sample template file!</h1>
+{{{content}}}
+</body>
+</html>
+```
 
-Grender's behavior will be controlled exclusively with commandline flags. It
-will not support configuration files or pay attention to environment variables.
-Nonstandard grender use cases should be handled by writing a wrapper script.
 
-Grender should deduce as much of its behavior as possible from implicit
-metadata: [source] file name and location. Convention over configuration.
+# Concepts
 
-Nontrivial URL mapping schemes should be managed in the web server
-configuration. Grender works best when you're able to manipulate that config.
+## Metadata
 
+Metadata occurs at the beginning of a source file. It's delimited (terminated)
+by the `-metadata-delimiter`. It's parsed as YAML. Grender reads (consumes) a
+few specific pieces of metadata as part of its processing, but all others are
+passed to the template in the context.
+
+## Source file content
+
+Source file content (everything after the `-metadata-delimiter`) is rendered
+according to the extension of the source file and placed in the context under
+the `-content-key`. An extension of `.md` implies Markdown; any other extension
+implies raw data, ie. no rendering will be performed.
+
+## Context object
+
+The context is all of the information that's given to a template, so that the
+template can be rendered to an HTML file. The context is primarily populated by
+the metadata portion of a given source file. Rendered source file content is
+provided under the `-content-key`. It should probably be referenced in the
+template with three sets of curly braces (eg. `{{{content}}}`) so that HTML tags
+aren't escaped.
+
+## Special case: blog entries
+
+Blog entries require additional, special treatment from the static site
+generator. Blog entries are organized and accessed by date. It should be
+possible to build an index page of blog entries, or some subset of them. At
+least one page will want to render "the most recent" blog entry. When viewing a
+blog entry it should be possible to navigate to the "next" and "previous" blog
+entries.
+
+To support these requirements, grender implements a concept called the
+**index**.
+
+## The index
+
+To join the index, a source page should define a map called `index` in its
+metadata. That map should contain at least one string called `key`, containing a
+unique value. Call this `index` map an **index-tuple**.
+
+As grender analyzes source files, it collects all of these index-tuples. The
+tuples are first organized into groups according to their `type` (if not
+present, `-default-index-type` is used). Then, each group sorts its tuples
+according to the their `key` (decreasing). This aggregate, ordered data
+structure is provided to every template rendering context as the `index`.
+
+To support the concept of showing "the most recent" blog entries on a certain
+page, the rendered content of the first `-index-content-count` index-tuples for
+each `type` is provided in the appropriate index-tuples, under the
+`-content-key`.
+
+As a convenience, source files whose basenames match the pattern
+`YYYY-MM-DD-title-text` are interpreted as blog entries, and automatically get
+an `index` metadata key, populated as follows:
+
+```
+index:
+	type: [-default-index-type]
+	key: YYYY-MM-DD-title-text
+	year: YYYY
+	month: MM
+	day: DD
+	title: title text
+	url: [-blog-path]/YYYY-MM-DD-title-text.[-output-extension]
+```
+
+## Output location
+
+Combining a source file with a template to produce an output file is simple
+enough, but where does that output file get placed? To begin, all output files
+go under the `-output-path` directory. Their relative location underneath that
+path is determined by their `output` metadata key. For example,
+
+* `output: foo` will generate `[-output-path]/foo.[-output-extension]`
+
+* `output: a/b/c/bar.baz` will generate
+  `[-output-path]/a/b/c/bar.baz.[-output-extension]`
+
+If no `output` metadata is specified, grender will use the complete relative
+path of the source file, minus its extension. For example,
+
+* `[-source-path]/foo/bar.md` will generate
+  `[-output-path]/foo/bar.[-output-extension]`
+
+As a special case, source files whose basenames match the pattern
+`YYYY-MM-DD-title-text` are interpreted as blog entries, and automatically get
+an `output` metadata key, populated with
+`[-output-path]/[-blog-path]/YYYY-MM-DD-title-text.[-output-extension]`.
