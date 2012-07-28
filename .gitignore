@@ -10,6 +10,7 @@ _source
 _templates
 _static
 _output
+_old*
 
 # Architecture specific extensions/prefixes
 *.[568vq]
