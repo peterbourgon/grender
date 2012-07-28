@@ -48,7 +48,9 @@ func ParseSourceFile(
 	// separate metadata from content, and dump content to context
 	if idx := strings.Index(s, delim); idx >= 0 {
 		delimiterCutoff := idx + len(delim) + 1 // plus '\n'
-		ctx[ckey] = strings.TrimSpace(string(RenderMarkdown(buf[delimiterCutoff:])))
+		rendered := RenderMarkdown(buf[delimiterCutoff:])
+		renderedString := strings.TrimSpace(string(rendered))
+		ctx[ckey] = renderedString
 		buf = buf[:idx] // buf contains only metadata
 	} else {
 		ctx[ckey] = "" // no content
