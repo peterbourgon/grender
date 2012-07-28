@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"launchpad.net/goyaml"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -49,9 +50,14 @@ func ParseSourceFile(
 	// separate metadata from content, and dump content to context
 	if idx := strings.Index(s, delim); idx >= 0 {
 		delimiterCutoff := idx + len(delim) + 1 // plus '\n'
-		rendered := RenderMarkdown(buf[delimiterCutoff:])
-		renderedString := strings.TrimSpace(string(rendered))
-		ctx[ckey] = renderedString
+		content := buf[delimiterCutoff:]
+
+		switch strings.ToLower(filepath.Ext(filename)) {
+		case ".md":
+			content = RenderMarkdown(content)
+		}
+
+		ctx[ckey] = strings.TrimSpace(string(content))
 		buf = buf[:idx] // buf contains only metadata
 	} else {
 		ctx[ckey] = "" // no content
