@@ -1,10 +1,10 @@
 package main
 
 import (
-	"io/ioutil"
 	"bytes"
-	"strings"
 	"fmt"
+	"io/ioutil"
+	"strings"
 )
 
 const (
@@ -12,18 +12,29 @@ const (
 	CompositionSuffix = "]]"
 )
 
+// ComposeTemplate recursively resolves Compose directives in the given
+// template file. A Compose directive is just a naïve "include": it drops the
+// content of another template file (specified by filename) in-place into the
+// current template.
+//
+//  a.template: "hello {{name}}"
+//  b.template: "<p>[[a.template]]</p>"
+//  c.template: "<body>[[b.template]]</body>"
+//
+// Composing c.template yields "<body><p>hello {{name}}</p></body>"
+//
 func ComposeTemplate(templatesDir, filename string) ([]byte, error) {
 	b, err := ioutil.ReadFile(templatesDir + "/" + filename)
 	if err != nil {
 		return []byte{}, err
 	}
+
 	str := bytes.NewBuffer(b).String()
 	out := []byte{}
 	pos := 0
 	for {
 
 		// Find the next template-inclusion directive
-		Debugf("ComposeTemplate %s: pos=%d", filename, pos)
 		a := strings.Index(str[pos:], CompositionPrefix)
 		if a == -1 {
 			out = append(out, []byte(str[pos:])...) // write ending bytes
@@ -43,7 +54,6 @@ func ComposeTemplate(templatesDir, filename string) ([]byte, error) {
 			)
 		}
 		filenameEnd := filenameBegin + b
-		Debugf("%s: %s @ %d, %s @ %d", filename, CompositionPrefix, filenameBegin, CompositionSuffix, filenameEnd)
 
 		// Compose that template
 		includedFile := str[filenameBegin:filenameEnd]
@@ -55,7 +65,6 @@ func ComposeTemplate(templatesDir, filename string) ([]byte, error) {
 				a,
 			)
 		}
-		Debugf("%s: includedFile @ %d: %s", filename, filenameBegin, includedFile)
 		replacement, err := ComposeTemplate(templatesDir, includedFile)
 		if err != nil {
 			return nil, err
@@ -64,7 +73,6 @@ func ComposeTemplate(templatesDir, filename string) ([]byte, error) {
 		// Drop it in-place and repeat
 		out = append(out, replacement...)
 		pos = filenameEnd + len(CompositionSuffix)
-
 	}
 
 	return out, nil
