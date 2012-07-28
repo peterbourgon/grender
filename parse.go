@@ -12,10 +12,11 @@ import (
 // relative path which must exist  under the passed parentDir) and extracts a
 // Context object from its metadata.
 //
-// If err is nil, the returned Context is guaranteed to contain entries for ckey
-// (the content key, containing the un-rendered body of the source file), tkey
-// (the template file that should be used to render the content), and okey (the
-// output file that should be rendered).
+// If err is nil, the returned Context is guaranteed to contain values for:
+//  ckey - content; containing the Markdown-rendered body of the source file
+//  tkey - template file that should be used to render the content
+//  okey - the output filename that should be rendered-to
+//
 func ParseSourceFile(
 	parentDir string,
 	filename string,
