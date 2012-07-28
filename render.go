@@ -17,7 +17,7 @@ func RenderTemplate(templatePath, templateFile string, ctx Context) ([]byte, err
 	return []byte(rendered), nil
 }
 
-// RenderMarkdown renders the passed buffer as Markdown, supressing errors.
+// RenderMarkdown renders the passed buffer as Markdown, suppressing errors.
 func RenderMarkdown(buf []byte) []byte {
 	htmlOptions := 0
 	htmlOptions = htmlOptions | blackfriday.HTML_GITHUB_BLOCKCODE
