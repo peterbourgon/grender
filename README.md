@@ -45,10 +45,8 @@ passed to the template in the context.
 
 ### Source file content
 
-Source file content (everything after the `-metadata-delimiter`) is rendered
-according to the extension of the source file and placed in the context under
-the `-content-key`. An extension of `.md` implies Markdown; any other extension
-implies raw data, ie. no rendering will be performed.
+Source file content (everything after the `-metadata-delimiter`) is rendered as
+Markdown, and placed in the context under the `-content-key`.
 
 ### Context (object)
 
