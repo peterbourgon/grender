@@ -3,6 +3,11 @@
 Grender is a static site generator. It combines source files and template files
 to produce a website.
 
+[![Build Status][1]][2]
+
+[1]: https://secure.travis-ci.org/peterbourgon/grender.png
+[2]: http://www.travis-ci.org/peterbourgon/grender
+
 ## File types
 
 ### Source files
