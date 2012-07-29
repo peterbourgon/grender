@@ -1,0 +1,13 @@
+<html>
+<head>
+	<title>A site about animals</title>
+</head>
+<body>
+
+{{#images}}
+<img src="{{src}}" width={{width}} height={{height}} alt="{{alt}}" /> <br/>
+{{/images}}
+{{{content}}}
+
+</body>
+</html>

@@ -15,6 +15,7 @@ var (
 	outputExtension   = flag.String("output-extension", "html", "all rendered output files will have this extension")
 	sourcePath        = flag.String("source-path", "_source", "where source files are contained")
 	templatePath      = flag.String("template-path", "_templates", "where template files are contained")
+	staticPath        = flag.String("static-path", "_static", "static files copied directly to -output-path")
 	outputPath        = flag.String("output-path", "_site", "where grender will place output files")
 )
 
@@ -27,6 +28,10 @@ func Logf(format string, args ...interface{}) {
 }
 
 func main() {
+	if err := RecursiveCopy(*staticPath, *outputPath); err != nil {
+		Logf("copying %s to %s: %s", *staticPath, *outputPath, err)
+	}
+
 	for _, sourceFile := range Filenames(*sourcePath) {
 		ctx, err := ParseSourceFile(
 			*sourcePath,

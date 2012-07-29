@@ -38,6 +38,10 @@ A template file contains markup used to render an HTML file.
 </html>
 ```
 
+### Static files
+
+A static file is copied verbatim to the `-output-path`.
+
 
 ## Concepts
 
