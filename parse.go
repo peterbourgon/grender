@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -19,108 +20,175 @@ var (
 	R = regexp.MustCompile(fmt.Sprintf("%s-?%s?", YYYYMMDD, Title))
 )
 
-// ParseSourceFile reads the given filename (assumed to be a source file, and a
-// relative path which must exist  under the passed parentDir) and extracts a
-// Context object from its metadata.
-//
-// If err is nil, the returned Context is guaranteed to contain values for:
-//  ckey - content; containing the Markdown-rendered body of the source file
-//  tkey - template file that should be used to render the content
-//  okey - the output filename that should be rendered-to
-//
-// If err is nil and the filename matches the blog entry pattern, the returned
-// context is guaranteed to contain a value for
-//  ikey - the index-tuple entry for this source file
-//
-func ParseSourceFile(
-	parentDir string,
-	filename string,
-	idx Index,
-	bpath string,
-	delim string,
-	ckey string,
-	tkey string,
-	ikey string,
-	okey string,
-	ext string,
-) (ctx Context, err error) {
-	ctx = make(Context)
+// SourceFile is a representation of a parsed Source File,
+// with the important bits explicitly extracted.
+type SourceFile struct {
+	SourceFile   string
+	Metadata     map[string]interface{} // user-supplied metadata
+	TemplateFile string
+	OutputFile   string
+	IndexTuple   IndexTuple
+	Content      string
+}
 
-	// compose complete filename
-	if !strings.HasSuffix(parentDir, "/") {
-		parentDir = parentDir + "/"
+func NewSourceFile(filename string) *SourceFile {
+	return &SourceFile{
+		SourceFile: filename,
+		Metadata:   map[string]interface{}{},
 	}
-	absFilename := parentDir + filename
+}
+
+// IndexTuple is a representation of all fields in an index-tuple.
+type IndexTuple struct {
+	Type    string
+	SortKey string
+	Year    string
+	Month   string
+	Day     string
+	Title   string
+	URL     string
+}
+
+// ContributeTo merges the index-tuple to the global Index.
+// It also Sorts the Index type it's being contributed to.
+func (it *IndexTuple) ContributeTo(idx Index) {
+	if targetArray, ok := idx[it.Type]; ok {
+		idx[it.Type] = append(targetArray, it)
+	} else {
+		idx[it.Type] = OrderedIndexTuples{it}
+	}
+	sort.Sort(idx[it.Type])
+}
+
+// ParseSourceFile reads the given filename (assumed to be a source file) and
+// produces a parsed SourceFile object from its contents.
+func ParseSourceFile(filename string) (sf *SourceFile, err error) {
+	sf = NewSourceFile(filename)
 
 	// read file
-	f, err := os.Open(absFilename)
+	f, err := os.Open(filename)
 	if err != nil {
 		return
 	}
 	defer f.Close()
-
 	buf, err := ioutil.ReadAll(f)
 	if err != nil {
 		return
 	}
 	s := string(buf)
 
-	// separate metadata from content, and dump content to context
-	if idx := strings.Index(s, delim); idx >= 0 {
-		delimiterCutoff := idx + len(delim) + 1 // plus '\n'
-		content := buf[delimiterCutoff:]
+	// separate content
+	if idx := strings.Index(s, *metadataDelimiter); idx >= 0 {
+		delimiterCutoff := idx + len(*metadataDelimiter) + 1 // plus '\n'
+		contentBuf := buf[delimiterCutoff:]
 
 		switch strings.ToLower(filepath.Ext(filename)) {
 		case ".md":
-			content = RenderMarkdown(content)
+			contentBuf = RenderMarkdown(contentBuf)
 		}
 
-		ctx[ckey] = strings.TrimSpace(string(content))
-		buf = buf[:idx] // buf contains only metadata
-	} else {
-		ctx[ckey] = "" // no content
+		sf.Content = strings.TrimSpace(string(contentBuf))
+		buf = buf[:idx] // buf shall contain only metadata
 	}
 
-	// autopopulate ikey if it looks like a blog entry
-	basename := Basename("", filename)
-	a := R.FindAllStringSubmatch(basename, -1)
-	Logf("%s: %v", basename, a)
-	if a != nil && len(a) > 0 && len(a[0]) > 3 {
-		Logf("%s: blog entry", basename)
-		year, month, day, title := a[0][1], a[0][2], a[0][3], ""
-		if len(a[0]) > 3 {
-			title = strings.Replace(a[0][4], "-", " ", -1)
-			if len(title) > 1 {
-				title = strings.ToTitle(title)[:1] + title[1:]
-			}
-		}
-		ctx[ikey] = map[string]string{
-			"key":   basename,
-			"year":  year,
-			"month": month,
-			"day":   day,
-			"title": title,
-			"url":   fmt.Sprintf("%s/%s.%s", bpath, basename, ext),
-		}
-	} else {
-		Logf("%s: not a blog entry", basename)
+	// if the filename looks like a blog entry, autopopulate IndexTuple
+	basename := Basename(*sourcePath, filename)
+	if y, m, d, t, err := blogEntry(basename); err == nil {
+		sf.IndexTuple.Type = *defaultIndexTupleType
+		sf.IndexTuple.SortKey = basename
+		sf.IndexTuple.Year = y
+		sf.IndexTuple.Month = m
+		sf.IndexTuple.Day = d
+		sf.IndexTuple.Title = t
+		sf.IndexTuple.URL = fmt.Sprintf(
+			"%s/%s.%s",
+			*blogPath,
+			basename,
+			*outputExtension,
+		)
 	}
 
-	// unmarshal metadata as YAML
-	if err = goyaml.Unmarshal(buf, ctx); err != nil {
+	// read remaining metadata as YAML
+	if err = goyaml.Unmarshal(buf, sf.Metadata); err != nil {
 		return
 	}
 
+	// index-tuple related metadata gets copied over
+	if m0, ok := sf.Metadata[*indexTupleKey]; ok {
+		if m1, ok := m0.(map[interface{}]interface{}); ok {
+			for k, v := range m1 {
+				kStr, kOk := k.(string)
+				if !kOk {
+					continue
+				}
+				vStr, vOk := v.(string)
+				if !vOk {
+					continue
+				}
+				copyMetadata(&sf.IndexTuple, strings.ToLower(kStr), vStr)
+			}
+		}
+	}
+
 	// check for template key: missing = fatal
-	if _, ok := ctx[tkey]; !ok {
-		err = fmt.Errorf("%s: '%s' not provided", filename, tkey)
+	i, ok := sf.Metadata[*templateKey]
+	if !ok {
+		err = fmt.Errorf("%s: '%s' not provided", filename, *templateKey)
+		return
+	}
+	if sf.TemplateFile, ok = i.(string); !ok {
+		err = fmt.Errorf("%s: '%s' not a string", filename, *templateKey)
 		return
 	}
 
 	// check for output file key: missing = need to deduce from basename
-	if _, ok := ctx[okey]; !ok {
-		ctx[okey] = Basename(parentDir, filename)
+	i, ok = sf.Metadata[*outputKey]
+	if ok {
+		if sf.OutputFile, ok = i.(string); !ok {
+			err = fmt.Errorf("%s: '%s' not a string", filename, *outputKey)
+			return
+		}
+	} else {
+		sf.OutputFile = Basename(*sourcePath, filename)
+	}
+
+	err = nil // just in case
+	return
+}
+
+func blogEntry(basename string) (y, m, d, t string, err error) {
+	a := R.FindAllStringSubmatch(basename, -1)
+	if a == nil || len(a) <= 0 || len(a[0]) <= 3 {
+		err = fmt.Errorf("not a blog entry")
+		return
+	}
+
+	y, m, d, t = a[0][1], a[0][2], a[0][3], ""
+	if len(a[0]) > 3 {
+		t = strings.Replace(a[0][4], "-", " ", -1)
+		if len(t) > 1 {
+			t = strings.ToTitle(t)[:1] + t[1:]
+		}
 	}
 
 	return
+}
+
+func copyMetadata(it *IndexTuple, k, v string) {
+	switch k {
+	case *indexTupleTypeKey:
+		it.Type = v
+	case *indexTupleSortKeyKey:
+		it.SortKey = v
+	case "year":
+		it.Year = v
+	case "month":
+		it.Month = v
+	case "day":
+		it.Day = v
+	case "title":
+		it.Title = v
+	case "url":
+		it.URL = v
+	}
 }

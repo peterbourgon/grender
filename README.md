@@ -26,7 +26,8 @@ This is the **Markdown content** of my sample source file.
 
 ### Template files
 
-A template file contains markup used to render an HTML file.
+A template file contains markup and Mustache template tags, used to render an
+HTML file.
 
 ```
 <html>
@@ -83,19 +84,18 @@ To support these requirements, grender implements a concept called the
 ### The index
 
 To join the index, a source page should define a map called `index` in its
-metadata. That map should contain at least one string called `key`, containing a
-unique value. Call this `index` map an **index-tuple**.
+metadata. That map should contain at least one key, `-index-sort-key`,
+containing a unique value. Call this `index` map an **index-tuple**.
 
 As grender analyzes source files, it collects all of these index-tuples. The
 tuples are first organized into groups according to their `type` (if not
 present, `-default-index-type` is used). Then, each group sorts its tuples
-according to the their `key` (decreasing). This aggregate, ordered data
-structure is provided to every template rendering context as the `index`.
+according to the their `-index-sort-key` (decreasing). This aggregate, ordered
+data structure is provided to every template rendering context as the `index`.
 
 To support the concept of showing "the most recent" blog entries on a certain
-page, the rendered content of the first `-index-content-count` index-tuples for
-each `type` is provided in the appropriate index-tuples, under the
-`-content-key`.
+page, the rendered content all index-tuples for each `type` is provided in the
+appropriate index-tuples, under the `-content-key`.
 
 As a convenience, source files whose basenames match the pattern
 `YYYY-MM-DD-title-text` are interpreted as blog entries, and automatically get
@@ -110,6 +110,7 @@ index:
 	day: DD
 	title: title text
 	url: [-blog-path]/YYYY-MM-DD-title-text.[-output-extension]
+	[-content-key]: [rendered content]
 ```
 
 ### Output location

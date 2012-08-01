@@ -29,18 +29,7 @@ func TestBlogEntryFilenameRegex(t *testing.T) {
 
 func TestBadFile(t *testing.T) {
 	badFilename := "/no/such/file"
-	if _, err := ParseSourceFile(
-		"",
-		badFilename,
-		NewIndex(),
-		*blogPath,
-		*metadataDelimiter,
-		*contentKey,
-		*templateKey,
-		*indexKey,
-		*outputKey,
-		*outputExtension,
-	); err == nil {
+	if _, err := ParseSourceFile(badFilename); err == nil {
 		t.Fatalf("ParseSourceFile successfully read %s", badFilename)
 	} else {
 		t.Logf("ParseSourceFile('%s') gave error: %s (good!)", badFilename, err)
@@ -52,12 +41,13 @@ template: nosuch.template
 ---
 `
 
-func writeTempFile(t *testing.T, filename, body string) (tempDir string) {
+func writeSourceFile(t *testing.T, filename, body string) (tempDir string) {
 	tempDir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("using tempDir %s", tempDir)
+	defer func() { *sourcePath = tempDir }() // impt. when checking eg. URL
 
 	absTempFile := tempDir + "/" + filename
 	if err := os.MkdirAll(filepath.Dir(absTempFile), 0755); err != nil {
@@ -76,75 +66,45 @@ func writeTempFile(t *testing.T, filename, body string) (tempDir string) {
 	return
 }
 
-func TestAllKeys(t *testing.T) {
+func TestRequiredKeys(t *testing.T) {
 	tempFile := "dummy.src"
-	tempDir := writeTempFile(t, tempFile, simplestBody)
+	tempDir := writeSourceFile(t, tempFile, simplestBody)
 	defer os.RemoveAll(tempDir)
 
-	ctx, err := ParseSourceFile(
-		tempDir,
-		tempFile,
-		NewIndex(),
-		*blogPath,
-		*metadataDelimiter,
-		*contentKey,
-		*templateKey,
-		*indexKey,
-		*outputKey,
-		*outputExtension,
-	)
+	sf, err := ParseSourceFile(tempDir + "/" + tempFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	for _, key := range []string{*contentKey, *templateKey, *outputKey} {
-		if _, ok := ctx[key]; !ok {
-			t.Errorf("missing '%s' key", key)
-		} else {
-			t.Logf("got '%s' key OK", key)
-		}
+	if sf.TemplateFile == "" {
+		t.Errorf("%s missing", *templateKey)
+	}
+	if sf.OutputFile == "" {
+		t.Errorf("%s missing", *outputKey)
 	}
 }
 
 func TestDeducedOutputFilename(t *testing.T) {
 	for _, sourceFilename := range []string{"foo.src", "a/b/c.txt"} {
-		tempDir := writeTempFile(t, sourceFilename, simplestBody)
+		tempDir := writeSourceFile(t, sourceFilename, simplestBody)
 		defer os.RemoveAll(tempDir)
 
-		ctx, err := ParseSourceFile(
-			tempDir,
-			sourceFilename,
-			NewIndex(),
-			*blogPath,
-			*metadataDelimiter,
-			*contentKey,
-			*templateKey,
-			*indexKey,
-			*outputKey,
-			*outputExtension,
-		)
+		sf, err := ParseSourceFile(tempDir + "/" + sourceFilename)
 		if err != nil {
 			t.Errorf("%s: parsing: %s", sourceFilename, err)
 			continue
 		}
 
-		got, ok := ctx[*outputKey]
-		if !ok {
-			t.Errorf("%s: context missing '%s'", sourceFilename, *outputKey)
-			continue
-		}
-
+		got := sf.OutputFile
 		expected := Basename(tempDir, sourceFilename)
 		if got != expected {
 			t.Errorf("expected '%s', got '%s'", expected, got)
 			continue
 		}
-
-		t.Logf("'%s' gave %s=%s OK", sourceFilename, *outputKey, got)
 	}
 }
 
-func TestAutopopulatedIndex(t *testing.T) {
+func TestAutopopulatedIndexTupleTitles(t *testing.T) {
 	m := map[string]string{
 		"2012-01-01.md":             "",
 		"2012-01-01-hello.md":       "Hello",
@@ -152,52 +112,72 @@ func TestAutopopulatedIndex(t *testing.T) {
 	}
 
 	for tempFile, expectedTitle := range m {
-		tempDir := writeTempFile(t, tempFile, simplestBody)
+		tempDir := writeSourceFile(t, tempFile, simplestBody)
 		defer os.RemoveAll(tempDir)
 
-		ctx, err := ParseSourceFile(
-			tempDir,
-			tempFile,
-			NewIndex(),
-			*blogPath,
-			*metadataDelimiter,
-			*contentKey,
-			*templateKey,
-			*indexKey,
-			*outputKey,
-			*outputExtension,
-		)
+		sf, err := ParseSourceFile(tempDir + "/" + tempFile)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		idxAbstract, ok := ctx[*indexKey]
-		if !ok {
-			t.Errorf("%s: no %s", tempFile, *indexKey)
-			continue
-		}
-
-		idx, ok := idxAbstract.(map[string]string)
-		if !ok {
-			t.Errorf("%s: not a map-type", tempFile)
-			continue
-		}
-
-		gotTitle, ok := idx["title"]
-		if !ok {
-			t.Errorf("%s: no %s", tempFile, "title")
-			continue
-		}
-
-		if gotTitle != expectedTitle {
+		if gotTitle := sf.IndexTuple.Title; gotTitle != expectedTitle {
 			t.Errorf("%s: got '%s', expected '%s'", tempFile, gotTitle, expectedTitle)
 			continue
 		}
 
 		expectedURL := *blogPath + "/" + Basename("", tempFile) + "." + *outputExtension
-		if gotURL := idx["url"]; gotURL != expectedURL {
+		if gotURL := sf.IndexTuple.URL; gotURL != expectedURL {
 			t.Errorf("%s: got '%s', expected '%s'", tempFile, gotURL, expectedURL)
 			continue
 		}
+	}
+}
+
+const titledContent = `
+template: nosuch.template
+index:
+   title: The INDEX TITLE!! from the Meta Data
+---
+Content of the thing.
+`
+
+func TestProperMergeOfIndexTupleMetadata(t *testing.T) {
+	filename := "2012-01-01-test-proper-merge-of-index.md"
+	tempDir := writeSourceFile(t, filename, titledContent)
+	defer os.RemoveAll(tempDir)
+
+	sf, err := ParseSourceFile(tempDir + "/" + filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedTitle := "The INDEX TITLE!! from the Meta Data"
+	if gotTitle := sf.IndexTuple.Title; gotTitle != expectedTitle {
+		t.Fatalf("%s: got '%s', expected '%s'", filename, gotTitle, expectedTitle)
+	}
+}
+
+func TestGlobalIndex(t *testing.T) {
+	filename := "2012-01-01-testing-global-index.md"
+	tempDir := writeSourceFile(t, filename, titledContent)
+	defer os.RemoveAll(tempDir)
+
+	sf, err := ParseSourceFile(tempDir + "/" + filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	idx := Index{}
+	sf.IndexTuple.ContributeTo(idx)
+
+	a, ok := idx[*defaultIndexTupleType]
+	if !ok {
+		t.Fatalf("%s not merged properly: '%s' missing", *indexTupleKey, *defaultIndexTupleType)
+	}
+	if len(a) != 1 {
+		t.Fatalf("%s not merged properly: '%s' is len=%d", *indexTupleKey, *defaultIndexTupleType, len(a))
+	}
+	if a[0].Title != "The INDEX TITLE!! from the Meta Data" {
+		t.Fatalf("%s not merged properly: bad title '%s'", *indexTupleKey, a[0].Title)
 	}
 }
