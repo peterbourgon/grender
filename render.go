@@ -6,10 +6,10 @@ import (
 )
 
 // RenderTemplate renders templateFile (a relative filename underneath
-// templatePath) using the given Context, returning a buffer.
+// *templatePath) using the given Context, returning a buffer.
 // RenderTemplate will also compose any included templates.
-func RenderTemplate(templatePath, templateFile string, ctx Context) ([]byte, error) {
-	buf, err := ComposeTemplate(templatePath, templateFile)
+func RenderTemplate(templateFile string, ctx Context) ([]byte, error) {
+	buf, err := ComposeTemplate(*templatePath, templateFile)
 	if err != nil {
 		return nil, err
 	}

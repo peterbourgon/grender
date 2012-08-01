@@ -34,7 +34,7 @@ func TestTemplateComposition(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("using tempDir %s", tempDir)
+	*templatePath = tempDir
 	defer os.RemoveAll(tempDir)
 
 	for filename, body := range m {
@@ -49,7 +49,7 @@ func TestTemplateComposition(t *testing.T) {
 	}
 
 	ctx := Context{"user": "friend"}
-	buf, err := RenderTemplate(tempDir, "c.template", ctx)
+	buf, err := RenderTemplate("c.template", ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

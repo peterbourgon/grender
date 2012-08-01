@@ -51,9 +51,9 @@ func main() {
 
 	// Second pass: render source files
 	for _, sf := range sourceFiles {
-		sf.Metadata[*indexKey] = idx // provide global index in context
+		sf.Metadata[*indexKey] = idx          // provide global index in ctx
+		sf.Metadata[*contentKey] = sf.Content // push content in there too
 		output, err := RenderTemplate(
-			*templatePath,
 			sf.TemplateFile,
 			sf.Metadata,
 		)
