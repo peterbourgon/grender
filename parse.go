@@ -60,13 +60,13 @@ func (it *IndexTuple) ContributeTo(idx Index) {
 	sort.Sort(idx[it.Type])
 }
 
-// ParseSourceFile reads the given filename (assumed to be a source file) and
-// produces a parsed SourceFile object from its contents.
+// ParseSourceFile reads the given filename (assumed to be a relative file under
+// *sourcePath) and produces a parsed SourceFile object from its contents.
 func ParseSourceFile(filename string) (sf *SourceFile, err error) {
 	sf = NewSourceFile(filename)
 
 	// read file
-	f, err := os.Open(filename)
+	f, err := os.Open(*sourcePath + "/" + filename)
 	if err != nil {
 		return
 	}

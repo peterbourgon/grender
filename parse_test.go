@@ -47,7 +47,7 @@ func writeSourceFile(t *testing.T, filename, body string) (tempDir string) {
 		t.Fatal(err)
 	}
 	t.Logf("using tempDir %s", tempDir)
-	defer func() { *sourcePath = tempDir }() // impt. when checking eg. URL
+	*sourcePath = tempDir // impt. when checking eg. URL
 
 	absTempFile := tempDir + "/" + filename
 	if err := os.MkdirAll(filepath.Dir(absTempFile), 0755); err != nil {
@@ -71,7 +71,7 @@ func TestRequiredKeys(t *testing.T) {
 	tempDir := writeSourceFile(t, tempFile, simplestBody)
 	defer os.RemoveAll(tempDir)
 
-	sf, err := ParseSourceFile(tempDir + "/" + tempFile)
+	sf, err := ParseSourceFile(tempFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestDeducedOutputFilename(t *testing.T) {
 		tempDir := writeSourceFile(t, sourceFilename, simplestBody)
 		defer os.RemoveAll(tempDir)
 
-		sf, err := ParseSourceFile(tempDir + "/" + sourceFilename)
+		sf, err := ParseSourceFile(sourceFilename)
 		if err != nil {
 			t.Errorf("%s: parsing: %s", sourceFilename, err)
 			continue
@@ -115,7 +115,7 @@ func TestAutopopulatedIndexTupleTitles(t *testing.T) {
 		tempDir := writeSourceFile(t, tempFile, simplestBody)
 		defer os.RemoveAll(tempDir)
 
-		sf, err := ParseSourceFile(tempDir + "/" + tempFile)
+		sf, err := ParseSourceFile(tempFile)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -146,7 +146,7 @@ func TestProperMergeOfIndexTupleMetadata(t *testing.T) {
 	tempDir := writeSourceFile(t, filename, titledContent)
 	defer os.RemoveAll(tempDir)
 
-	sf, err := ParseSourceFile(tempDir + "/" + filename)
+	sf, err := ParseSourceFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestGlobalIndex(t *testing.T) {
 	tempDir := writeSourceFile(t, filename, titledContent)
 	defer os.RemoveAll(tempDir)
 
-	sf, err := ParseSourceFile(tempDir + "/" + filename)
+	sf, err := ParseSourceFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
