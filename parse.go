@@ -60,6 +60,22 @@ func (it *IndexTuple) ContributeTo(idx Index) {
 	sort.Sort(idx[it.Type])
 }
 
+// Render compiles the index-tuple down to a flat map[string]string.
+func (it *IndexTuple) Render() map[string]string {
+	m := map[string]string{
+		*indexTupleTypeKey:    it.Type,
+		*indexTupleSortKeyKey: it.SortKey,
+		"year":                it.Year,
+		"month":               it.Month,
+		"day":                 it.Day,
+		"url":                 it.URL,
+	}
+	if it.Title != "" {
+		m["title"] = it.Title
+	}
+	return m
+}
+
 // ParseSourceFile reads the given filename (assumed to be a relative file under
 // *sourcePath) and produces a parsed SourceFile object from its contents.
 func ParseSourceFile(filename string) (sf *SourceFile, err error) {
@@ -91,21 +107,18 @@ func ParseSourceFile(filename string) (sf *SourceFile, err error) {
 		buf = buf[:idx] // buf shall contain only metadata
 	}
 
-	// if the filename looks like a blog entry, autopopulate IndexTuple
+	// if the filename looks like a blog entry, autopopulate some metadata
 	basename := Basename(*sourcePath, filename)
 	if y, m, d, t, err := blogEntry(basename); err == nil {
+		sf.OutputFile = fmt.Sprintf("%s/%s", *blogPath, basename)
+
 		sf.IndexTuple.Type = *defaultIndexTupleType
 		sf.IndexTuple.SortKey = basename
 		sf.IndexTuple.Year = y
 		sf.IndexTuple.Month = m
 		sf.IndexTuple.Day = d
 		sf.IndexTuple.Title = t
-		sf.IndexTuple.URL = fmt.Sprintf(
-			"%s/%s.%s",
-			*blogPath,
-			basename,
-			*outputExtension,
-		)
+		sf.IndexTuple.URL = fmt.Sprintf("%s.%s", sf.OutputFile, *outputExtension)
 	}
 
 	// read remaining metadata as YAML
@@ -142,14 +155,16 @@ func ParseSourceFile(filename string) (sf *SourceFile, err error) {
 	}
 
 	// check for output file key: missing = need to deduce from basename
-	i, ok = sf.Metadata[*outputKey]
-	if ok {
-		if sf.OutputFile, ok = i.(string); !ok {
-			err = fmt.Errorf("%s: '%s' not a string", filename, *outputKey)
-			return
+	if sf.OutputFile == "" {
+		i, ok = sf.Metadata[*outputKey]
+		if ok {
+			if sf.OutputFile, ok = i.(string); !ok {
+				err = fmt.Errorf("%s: '%s' not a string", filename, *outputKey)
+				return
+			}
+		} else {
+			sf.OutputFile = Basename(*sourcePath, filename)
 		}
-	} else {
-		sf.OutputFile = Basename(*sourcePath, filename)
 	}
 
 	err = nil // just in case

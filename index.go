@@ -11,6 +11,17 @@ func (idx Index) Append(typ string, tuple *IndexTuple) {
 	}
 }
 
+func (idx Index) Render() map[string][]map[string]string {
+	m := map[string][]map[string]string{}
+	for typ, a := range idx {
+		m[typ] = make([]map[string]string, len(a))
+		for i := 0; i < len(a); i++ {
+			m[typ][i] = a[i].Render()
+		}
+	}
+	return m
+}
+
 //
 //
 //

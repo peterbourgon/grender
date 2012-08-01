@@ -1,0 +1,13 @@
+<html>
+<head>
+<title>{{pagetitle}}<title>
+</head>
+<body>
+
+<ul>
+{{#index}}{{#blog}}
+<li><a href="{{url}}">{{year}}-{{month}}-{{day}}{{#title}}: {{title}}{{/title}}</a></li>
+{{/blog}}{{/index}}</ul>
+
+</body>
+</html>

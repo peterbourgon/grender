@@ -48,11 +48,13 @@ func main() {
 		sf.IndexTuple.ContributeTo(idx) // sorts as it goes
 		sourceFiles = append(sourceFiles, sf)
 	}
+	idxMap := idx.Render()
 
 	// Second pass: render source files
 	for _, sf := range sourceFiles {
-		sf.Metadata[*indexKey] = idx          // provide global index in ctx
+		sf.Metadata[*indexKey] = idxMap       // provide global index in ctx
 		sf.Metadata[*contentKey] = sf.Content // push content in there too
+		Logf("%s: rendering with ctx: %v", sf.SourceFile, sf.Metadata)
 		output, err := RenderTemplate(
 			sf.TemplateFile,
 			sf.Metadata,
