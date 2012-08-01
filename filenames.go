@@ -11,6 +11,7 @@ import (
 // Filenames walks the path rooted at 'root' and returns a slice containing
 // the (relative) filenames of every file under that path.
 func Filenames(root string) []string {
+	root = filepath.Clean(root)
 	rootCutoff := len(root)
 	if root[rootCutoff-1:] != "/" {
 		rootCutoff++ // also cut the trailing '/' in any discovered paths
