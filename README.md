@@ -12,10 +12,13 @@ to produce a website.
 
 ### Source files
 
-A source file contains the content of a page, plus some metadata. Content can be
-raw HTML, or some renderable markup language, like Markdown. Metadata can be
-explicitly specified, or can be deduced from other properties of the source
-file, like its basename (the filename without the extension).
+A source file contains the content of a page, plus some [metadata](#metadata).
+Content can be raw HTML, or some renderable markup language, like
+[Markdown][markdown]. Metadata can be explicitly specified, or can be deduced
+from other properties of the source file, like its basename (the filename
+without the extension).
+
+[markdown]: http://daringfireball.net/projects/markdown/syntax
 
 ```
 template: basic.template
@@ -26,8 +29,10 @@ This is the **Markdown content** of my sample source file.
 
 ### Template files
 
-A template file contains markup and Mustache template tags, used to render an
-HTML file.
+A template file contains markup and [Mustache][mustache] template tags, used to
+render an HTML file.
+
+[mustache]: http://github.com/hoisie/mustache
 
 ```
 <html>
@@ -51,14 +56,17 @@ A static file is copied verbatim to the `-output-path`.
 Metadata occurs at the beginning of a source file. It's delimited (terminated)
 by the `-metadata-delimiter`. It's parsed as YAML. Grender reads (consumes) a
 few specific pieces of metadata as part of its processing, but all others are
-passed to the template in the context.
+passed to the template in the [context](#context-object).
+
 
 ### Source file content
 
 Source file content (everything after the `-metadata-delimiter`) is rendered
-according to the extension of the source file and placed in the context under
-the `-content-key`. An extension of `.md` implies Markdown; any other extension
-implies raw data, ie. no rendering will be performed.
+according to the extension of the source file and placed in the
+[context](#context-object) under the `-content-key`. An extension of `.md`
+implies Markdown; any other extension implies raw data, ie. no rendering will
+be performed.
+
 
 ### Context (object)
 
@@ -69,49 +77,41 @@ provided under the `-content-key`. It should probably be referenced in the
 template with three sets of curly braces (eg. `{{{content}}}`) so that HTML tags
 aren't escaped.
 
+
 ### Special case: blog entries
 
-Blog entries require additional, special treatment from the static site
-generator. Blog entries are organized and accessed by date. It should be
-possible to build an index page of blog entries, or some subset of them. At
-least one page will want to render "the most recent" blog entry. When viewing a
-blog entry it should be possible to navigate to the "next" and "previous" blog
+Blog entries are a special type of source file. They need to be available, in
+whole or part, to templates that want to build lists of entries, or display the
+most-recent-N entries entirely, with links to the previous and next page(s) of
 entries.
 
 To support these requirements, grender implements a concept called the
 **index**.
 
+
 ### The index
 
-To join the index, a source page should define a map called `index` in its
-metadata. That map should contain at least one key, `-index-sort-key`,
-containing a unique value. Call this `index` map an **index-tuple**.
-
-As grender analyzes source files, it collects all of these index-tuples. The
-tuples are first organized into groups according to their `type` (if not
-present, `-default-index-type` is used). Then, each group sorts its tuples
-according to the their `-index-sort-key` (decreasing). This aggregate, ordered
-data structure is provided to every template rendering context as the `index`.
-
-To support the concept of showing "the most recent" blog entries on a certain
-page, the rendered content all index-tuples for each `type` is provided in the
-appropriate index-tuples, under the `-content-key`.
-
-As a convenience, source files whose basenames match the pattern
-`YYYY-MM-DD-title-text` are interpreted as blog entries, and automatically get
-an `index` metadata key, populated as follows:
+A source page automatically becomes a member of the **index** if its name
+matches a specific pattern: `YYYY-MM-DD-title-of-entry`. Based on this name, a
+few metadata fields are automatically populated (but may be overridden). These
+are best illustrated by example. A file named `2012-01-02-my-entry-name.md` will
+have the following metadata populated:
 
 ```
-index:
-	type: [-default-index-type]
-	key: YYYY-MM-DD-title-text
-	year: YYYY
-	month: MM
-	day: DD
-	title: title text
-	url: [-blog-path]/YYYY-MM-DD-title-text.[-output-extension]
-	[-content-key]: [rendered content]
+title: My entry name
+year: 2012
+month: 01
+day: 02
+output: [-output-path]/[-blog-path]/YYYY-MM-DD-my-entry-name.[-output-extension]
+url: [-blog-path]/2012-01-02-my-entry-name.[-output-extension]
+sortkey: 2012-01-02-my-entry-name
 ```
+
+During runtime, every source file that qualifies for the index will have its
+(rendered) context object collected into a list, sorted by the sortkey. That
+complete sorted list is provided to every source file specifying `index: true`
+in its metadata, under the same `index` key (ie. replacing `true`).
+
 
 ### Output location
 
@@ -128,10 +128,5 @@ path is determined by their `output` metadata key. For example,
 If no `output` metadata is specified, grender will use the complete relative
 path of the source file, minus its extension. For example,
 
-* `[-source-path]/foo/bar.md` will generate
+* `[-source-path]/foo/bar.md` implies `output: foo/bar` and and will generate
   `[-output-path]/foo/bar.[-output-extension]`
-
-As a special case, source files whose basenames match the pattern
-`YYYY-MM-DD-title-text` are interpreted as blog entries, and automatically get
-an `output` metadata key, populated with
-`[-output-path]/[-blog-path]/YYYY-MM-DD-title-text.[-output-extension]`.
