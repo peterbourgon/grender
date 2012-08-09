@@ -7,73 +7,79 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 )
 
 const (
 	YYYYMMDD = "([0-9]{4})-([0-9]{2})-([0-9]{2})"
-	Title    = "([0-9A-Za-z_-]+)"
+	T        = "([0-9A-Za-z_-]+)"
 )
 
 var (
-	R = regexp.MustCompile(fmt.Sprintf("%s-?%s?", YYYYMMDD, Title))
+	R = regexp.MustCompile(fmt.Sprintf("%s-%s", YYYYMMDD, T))
 )
 
 // SourceFile is a representation of a parsed Source File,
 // with the important bits explicitly extracted.
 type SourceFile struct {
-	SourceFile   string
-	Metadata     map[string]interface{} // user-supplied metadata
-	TemplateFile string
-	OutputFile   string
-	IndexTuple   IndexTuple
-	Content      string
+	SourceFile string
+	Basename   string
+	Metadata   map[string]interface{} // user-supplied metadata
+	Content    string
 }
+
+type SourceFiles []*SourceFile
 
 func NewSourceFile(filename string) *SourceFile {
 	return &SourceFile{
 		SourceFile: filename,
+		Basename:   Basename(*sourcePath, filename),
 		Metadata:   map[string]interface{}{},
 	}
 }
 
-// IndexTuple is a representation of all fields in an index-tuple.
-type IndexTuple struct {
-	Type    string
-	SortKey string
-	Year    string
-	Month   string
-	Day     string
-	Title   string
-	URL     string
+func (sf *SourceFile) Indexable() bool {
+	a := R.FindAllStringSubmatch(sf.Basename, -1)
+	if a == nil || len(a) <= 0 || len(a[0]) <= 4 {
+		return false
+	}
+	return true
 }
 
-// ContributeTo merges the index-tuple to the global Index.
-// It also Sorts the Index type it's being contributed to.
-func (it *IndexTuple) ContributeTo(idx Index) {
-	if targetArray, ok := idx[it.Type]; ok {
-		idx[it.Type] = append(targetArray, it)
-	} else {
-		idx[it.Type] = OrderedIndexTuples{it}
-	}
-	sort.Sort(idx[it.Type])
+func (sf *SourceFile) SortKey() string {
+	return sf.getString("sortkey")
 }
 
-// Render compiles the index-tuple down to a flat map[string]string.
-func (it *IndexTuple) Render() map[string]string {
-	m := map[string]string{
-		*indexTupleTypeKey:    it.Type,
-		*indexTupleSortKeyKey: it.SortKey,
-		"year":                it.Year,
-		"month":               it.Month,
-		"day":                 it.Day,
-		"url":                 it.URL,
+func (sf *SourceFile) Template() string {
+	return sf.getString(*templateKey)
+}
+
+func (sf *SourceFile) Output() string {
+	return sf.getString(*outputKey)
+}
+
+func (sf *SourceFile) getAbstract(key string) interface{} {
+	i, ok := sf.Metadata[key]
+	if !ok {
+		return nil
 	}
-	if it.Title != "" {
-		m["title"] = it.Title
+	return i
+}
+
+func (sf *SourceFile) getBool(key string) bool {
+	b, ok := sf.getAbstract(key).(bool)
+	if !ok {
+		return false
 	}
-	return m
+	return b
+}
+
+func (sf *SourceFile) getString(key string) string {
+	s, ok := sf.getAbstract(key).(string)
+	if !ok {
+		return ""
+	}
+	return s
 }
 
 // ParseSourceFile reads the given filename (assumed to be a relative file under
@@ -108,17 +114,14 @@ func ParseSourceFile(filename string) (sf *SourceFile, err error) {
 	}
 
 	// if the filename looks like a blog entry, autopopulate some metadata
-	basename := Basename(*sourcePath, filename)
-	if y, m, d, t, err := blogEntry(basename); err == nil {
-		sf.OutputFile = fmt.Sprintf("%s/%s", *blogPath, basename)
-
-		sf.IndexTuple.Type = *defaultIndexTupleType
-		sf.IndexTuple.SortKey = basename
-		sf.IndexTuple.Year = y
-		sf.IndexTuple.Month = m
-		sf.IndexTuple.Day = d
-		sf.IndexTuple.Title = t
-		sf.IndexTuple.URL = fmt.Sprintf("%s.%s", sf.OutputFile, *outputExtension)
+	if y, m, d, t, err := blogEntry(sf.Basename); err == nil {
+		sf.Metadata["output"] = fmt.Sprintf("%s/%s", *blogPath, sf.Basename)
+		sf.Metadata["sortkey"] = sf.Basename
+		sf.Metadata["year"] = y
+		sf.Metadata["month"] = m
+		sf.Metadata["day"] = d
+		sf.Metadata["title"] = t
+		sf.Metadata["url"] = fmt.Sprintf("%s.%s", sf.Output(), *outputExtension)
 	}
 
 	// read remaining metadata as YAML
@@ -126,45 +129,15 @@ func ParseSourceFile(filename string) (sf *SourceFile, err error) {
 		return
 	}
 
-	// index-tuple related metadata gets copied over
-	if m0, ok := sf.Metadata[*indexTupleKey]; ok {
-		if m1, ok := m0.(map[interface{}]interface{}); ok {
-			for k, v := range m1 {
-				kStr, kOk := k.(string)
-				if !kOk {
-					continue
-				}
-				vStr, vOk := v.(string)
-				if !vOk {
-					continue
-				}
-				copyMetadata(&sf.IndexTuple, strings.ToLower(kStr), vStr)
-			}
-		}
-	}
-
 	// check for template key: missing = fatal
-	i, ok := sf.Metadata[*templateKey]
-	if !ok {
+	if sf.Template() == "" {
 		err = fmt.Errorf("%s: '%s' not provided", filename, *templateKey)
-		return
-	}
-	if sf.TemplateFile, ok = i.(string); !ok {
-		err = fmt.Errorf("%s: '%s' not a string", filename, *templateKey)
 		return
 	}
 
 	// check for output file key: missing = need to deduce from basename
-	if sf.OutputFile == "" {
-		i, ok = sf.Metadata[*outputKey]
-		if ok {
-			if sf.OutputFile, ok = i.(string); !ok {
-				err = fmt.Errorf("%s: '%s' not a string", filename, *outputKey)
-				return
-			}
-		} else {
-			sf.OutputFile = Basename(*sourcePath, filename)
-		}
+	if sf.Output() == "" {
+		sf.Metadata[*outputKey] = Basename(*sourcePath, filename)
 	}
 
 	err = nil // just in case
@@ -187,23 +160,4 @@ func blogEntry(basename string) (y, m, d, t string, err error) {
 	}
 
 	return
-}
-
-func copyMetadata(it *IndexTuple, k, v string) {
-	switch k {
-	case *indexTupleTypeKey:
-		it.Type = v
-	case *indexTupleSortKeyKey:
-		it.SortKey = v
-	case "year":
-		it.Year = v
-	case "month":
-		it.Month = v
-	case "day":
-		it.Day = v
-	case "title":
-		it.Title = v
-	case "url":
-		it.URL = v
-	}
 }

@@ -9,10 +9,10 @@ import (
 
 func TestBlogEntryFilenameRegex(t *testing.T) {
 	m := map[string]bool{
-		"2012-01-01":              true,
+		"2012-01-01":              false,
 		"2012-01-01-simple":       true,
 		"2012-01-01-more-complex": true,
-		"0000-00-00":              true,
+		"0000-00-00":              false,
 		"1234-56-78-a-b-c_def":    true,
 		"1234-56-78-_":            true,
 		"1234-56-78-a_b_c":        true,
@@ -76,10 +76,10 @@ func TestRequiredKeys(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if sf.TemplateFile == "" {
+	if sf.Template() == "" {
 		t.Errorf("%s missing", *templateKey)
 	}
-	if sf.OutputFile == "" {
+	if sf.Output() == "" {
 		t.Errorf("%s missing", *outputKey)
 	}
 }
@@ -95,7 +95,7 @@ func TestDeducedOutputFilename(t *testing.T) {
 			continue
 		}
 
-		got := sf.OutputFile
+		got := sf.Output()
 		expected := Basename(tempDir, sourceFilename)
 		if got != expected {
 			t.Errorf("expected '%s', got '%s'", expected, got)
@@ -104,9 +104,8 @@ func TestDeducedOutputFilename(t *testing.T) {
 	}
 }
 
-func TestAutopopulatedIndexTupleTitles(t *testing.T) {
+func TestAutopopulatedTitles(t *testing.T) {
 	m := map[string]string{
-		"2012-01-01.md":             "",
 		"2012-01-01-hello.md":       "Hello",
 		"2012-01-01-hello-there.md": "Hello there",
 	}
@@ -120,13 +119,13 @@ func TestAutopopulatedIndexTupleTitles(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if gotTitle := sf.IndexTuple.Title; gotTitle != expectedTitle {
+		if gotTitle := sf.getString("title"); gotTitle != expectedTitle {
 			t.Errorf("%s: got '%s', expected '%s'", tempFile, gotTitle, expectedTitle)
 			continue
 		}
 
 		expectedURL := *blogPath + "/" + Basename("", tempFile) + "." + *outputExtension
-		if gotURL := sf.IndexTuple.URL; gotURL != expectedURL {
+		if gotURL := sf.getString("url"); gotURL != expectedURL {
 			t.Errorf("%s: got '%s', expected '%s'", tempFile, gotURL, expectedURL)
 			continue
 		}
@@ -135,13 +134,12 @@ func TestAutopopulatedIndexTupleTitles(t *testing.T) {
 
 const titledContent = `
 template: nosuch.template
-index:
-   title: The INDEX TITLE!! from the Meta Data
+title: The INDEX TITLE!! from the Meta Data
 ---
 Content of the thing.
 `
 
-func TestProperMergeOfIndexTupleMetadata(t *testing.T) {
+func TestMergeIndexMetadata(t *testing.T) {
 	filename := "2012-01-01-test-proper-merge-of-index.md"
 	tempDir := writeSourceFile(t, filename, titledContent)
 	defer os.RemoveAll(tempDir)
@@ -152,7 +150,7 @@ func TestProperMergeOfIndexTupleMetadata(t *testing.T) {
 	}
 
 	expectedTitle := "The INDEX TITLE!! from the Meta Data"
-	if gotTitle := sf.IndexTuple.Title; gotTitle != expectedTitle {
+	if gotTitle := sf.getString("title"); gotTitle != expectedTitle {
 		t.Fatalf("%s: got '%s', expected '%s'", filename, gotTitle, expectedTitle)
 	}
 }
@@ -168,16 +166,11 @@ func TestGlobalIndex(t *testing.T) {
 	}
 
 	idx := Index{}
-	sf.IndexTuple.ContributeTo(idx)
-
-	a, ok := idx[*defaultIndexTupleType]
-	if !ok {
-		t.Fatalf("%s not merged properly: '%s' missing", *indexTupleKey, *defaultIndexTupleType)
+	idx.Add(sf)
+	if len(idx) != 1 {
+		t.Fatalf("%s not merged properly: len=%d", sf.Basename, len(idx))
 	}
-	if len(a) != 1 {
-		t.Fatalf("%s not merged properly: '%s' is len=%d", *indexTupleKey, *defaultIndexTupleType, len(a))
-	}
-	if a[0].Title != "The INDEX TITLE!! from the Meta Data" {
-		t.Fatalf("%s not merged properly: bad title '%s'", *indexTupleKey, a[0].Title)
+	if title := idx[0].getString("title"); title != "The INDEX TITLE!! from the Meta Data" {
+		t.Fatalf("%s not merged properly: bad title '%s'", sf.Basename, title)
 	}
 }
