@@ -1,5 +1,5 @@
 template: index.template
-pagetitle: An index of my blog posts
+title: An index of my blog posts
 note: Basically, all the logic for this page is in the template.
 index: true
 
