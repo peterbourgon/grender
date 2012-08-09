@@ -5,6 +5,14 @@ import (
 	"fmt"
 )
 
+const (
+	TitleKey = "title"
+	YearKey  = "year"
+	MonthKey = "month"
+	DayKey   = "day"
+	URLKey   = "url"
+)
+
 var (
 	sourcePath   = flag.String("source-path", "_source", "where source files are contained")
 	templatePath = flag.String("template-path", "_templates", "where template files are contained")
@@ -19,6 +27,7 @@ var (
 	templateKey = flag.String("template-key", "template", "the metadata key that specifies the desired template")
 	outputKey   = flag.String("output-key", "output", "the metadata key that specifies the desired output file basename")
 	indexKey    = flag.String("index-key", "index", "the metadata key that specifies the global index in the context")
+	sortkeyKey  = flag.String("sortkey-key", "sortkey", "the metadata key that specifies the sort value for a given source file")
 
 	debug = flag.Bool("debug", false, "provide debug output")
 )
@@ -58,8 +67,8 @@ func main() {
 
 	// Second pass: render source files
 	for _, sf := range sourceFiles {
-		if sf.getBool("index") {
-			sf.Metadata["index"] = idx.Render()
+		if sf.getBool(*indexKey) {
+			sf.Metadata[*indexKey] = idx.Render()
 		}
 		Debugf("%s: rendering with ctx: %v", sf.SourceFile, sf.Metadata)
 		output, err := RenderTemplate(

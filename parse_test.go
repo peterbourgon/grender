@@ -119,13 +119,13 @@ func TestAutopopulatedTitles(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if gotTitle := sf.getString("title"); gotTitle != expectedTitle {
+		if gotTitle := sf.getString(TitleKey); gotTitle != expectedTitle {
 			t.Errorf("%s: got '%s', expected '%s'", tempFile, gotTitle, expectedTitle)
 			continue
 		}
 
 		expectedURL := *blogPath + "/" + Basename("", tempFile) + "." + *outputExtension
-		if gotURL := sf.getString("url"); gotURL != expectedURL {
+		if gotURL := sf.getString(URLKey); gotURL != expectedURL {
 			t.Errorf("%s: got '%s', expected '%s'", tempFile, gotURL, expectedURL)
 			continue
 		}
@@ -150,7 +150,7 @@ func TestMergeIndexMetadata(t *testing.T) {
 	}
 
 	expectedTitle := "The INDEX TITLE!! from the Meta Data"
-	if gotTitle := sf.getString("title"); gotTitle != expectedTitle {
+	if gotTitle := sf.getString(TitleKey); gotTitle != expectedTitle {
 		t.Fatalf("%s: got '%s', expected '%s'", filename, gotTitle, expectedTitle)
 	}
 }
@@ -170,7 +170,7 @@ func TestGlobalIndex(t *testing.T) {
 	if len(idx) != 1 {
 		t.Fatalf("%s not merged properly: len=%d", sf.Basename, len(idx))
 	}
-	if title := idx[0].getString("title"); title != "The INDEX TITLE!! from the Meta Data" {
+	if title := idx[0].getString(TitleKey); title != "The INDEX TITLE!! from the Meta Data" {
 		t.Fatalf("%s not merged properly: bad title '%s'", sf.Basename, title)
 	}
 }

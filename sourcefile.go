@@ -66,7 +66,7 @@ func (sf *SourceFile) BlogEntry() (y, m, d, t string, err error) {
 }
 
 func (sf *SourceFile) SortKey() string {
-	return sf.getString("sortkey")
+	return sf.getString(*sortkeyKey)
 }
 
 func (sf *SourceFile) Template() string {
