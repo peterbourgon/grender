@@ -25,7 +25,6 @@ type SourceFile struct {
 	SourceFile string
 	Basename   string
 	Metadata   map[string]interface{} // user-supplied metadata
-	Content    string
 }
 
 type SourceFiles []*SourceFile
@@ -82,6 +81,14 @@ func (sf *SourceFile) getString(key string) string {
 	return s
 }
 
+func (sf *SourceFile) Render() map[string]interface{} {
+	return sf.Metadata
+}
+
+//
+//
+//
+
 // ParseSourceFile reads the given filename (assumed to be a relative file under
 // *sourcePath) and produces a parsed SourceFile object from its contents.
 func ParseSourceFile(filename string) (sf *SourceFile, err error) {
@@ -109,7 +116,7 @@ func ParseSourceFile(filename string) (sf *SourceFile, err error) {
 			contentBuf = RenderMarkdown(contentBuf)
 		}
 
-		sf.Content = strings.TrimSpace(string(contentBuf))
+		sf.Metadata[*contentKey] = strings.TrimSpace(string(contentBuf))
 		buf = buf[:idx] // buf shall contain only metadata
 	}
 

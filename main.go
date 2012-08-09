@@ -59,9 +59,8 @@ func main() {
 	// Second pass: render source files
 	for _, sf := range sourceFiles {
 		if sf.getBool("index") {
-			sf.Metadata["index"] = idx
+			sf.Metadata["index"] = idx.Render()
 		}
-		sf.Metadata[*contentKey] = sf.Content // push content in there too
 		Debugf("%s: rendering with ctx: %v", sf.SourceFile, sf.Metadata)
 		output, err := RenderTemplate(
 			sf.getString(*templateKey),

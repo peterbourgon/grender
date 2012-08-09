@@ -5,9 +5,9 @@
 <body>
 
 <ul>
-{{#index}}{{#blog}}
-<li><a href="{{url}}">{{year}}-{{month}}-{{day}}{{#title}}: {{title}}{{/title}}</a></li>
-{{/blog}}{{/index}}</ul>
+{{#index}}
+<li><a href="{{url}}">{{year}}-{{month}}-{{day}}: {{title}}</a></li>
+{{/index}}</ul>
 
 </body>
 </html>

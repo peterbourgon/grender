@@ -1,5 +1,4 @@
 template: blogentry.template
-index:
-  title: Valentine's Day is today!
+title: Valentine's Day is today!
 ---
 At least, I think it's Valentine's day today.
