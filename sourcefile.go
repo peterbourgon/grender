@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	YYYYMMDDT = "([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9A-Za-z_-]+)"
+	MaxGetCount = 999999999
+	YYYYMMDDT   = "([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9A-Za-z_-]+)"
 )
 
 var (
@@ -65,18 +66,6 @@ func (sf *SourceFile) BlogEntry() (y, m, d, t string, err error) {
 	return
 }
 
-func (sf *SourceFile) SortKey() string {
-	return sf.getString(*sortkeyKey)
-}
-
-func (sf *SourceFile) Template() string {
-	return sf.getString(*templateKey)
-}
-
-func (sf *SourceFile) Output() string {
-	return sf.getString(*outputKey)
-}
-
 func (sf *SourceFile) getAbstract(key string) interface{} {
 	i, ok := sf.Metadata[key]
 	if !ok {
@@ -85,12 +74,19 @@ func (sf *SourceFile) getAbstract(key string) interface{} {
 	return i
 }
 
-func (sf *SourceFile) getBool(key string) bool {
-	b, ok := sf.getAbstract(key).(bool)
-	if !ok {
-		return false
+func (sf *SourceFile) getCount(key string) (int, error) {
+	i := sf.getAbstract(key)
+	if b, ok := i.(bool); ok {
+		if b {
+			return MaxGetCount, nil
+		} else {
+			return 0, nil
+		}
 	}
-	return b
+	if n, ok := i.(int); ok {
+		return n, nil
+	}
+	return 0, fmt.Errorf("failed to parse '%s' as count", key)
 }
 
 func (sf *SourceFile) getString(key string) string {

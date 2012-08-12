@@ -76,10 +76,10 @@ func TestRequiredKeys(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if sf.Template() == "" {
+	if sf.getString(*templateKey) == "" {
 		t.Errorf("%s missing", *templateKey)
 	}
-	if sf.Output() == "" {
+	if sf.getString(*outputKey) == "" {
 		t.Errorf("%s missing", *outputKey)
 	}
 }
@@ -95,7 +95,7 @@ func TestDeducedOutputFilename(t *testing.T) {
 			continue
 		}
 
-		got := sf.Output()
+		got := sf.getString(*outputKey)
 		expected := Basename(tempDir, sourceFilename)
 		if got != expected {
 			t.Errorf("expected '%s', got '%s'", expected, got)

@@ -56,7 +56,7 @@ func main() {
 	for _, sourceFile := range Filenames(*sourcePath) {
 		sf, err := ParseSourceFile(sourceFile)
 		if err != nil {
-			Debugf("%s: parsing: %s", sourceFile, err)
+			Logf("%s: parsing: %s", sourceFile, err)
 			continue
 		}
 		if sf.Indexable() {
@@ -67,8 +67,8 @@ func main() {
 
 	// Second pass: render source files
 	for _, sf := range sourceFiles {
-		if sf.getBool(*indexKey) {
-			sf.Metadata[*indexKey] = idx.Render()
+		if n, err := sf.getCount(*indexKey); err == nil {
+			sf.Metadata[*indexKey] = idx.Render(n)
 		}
 		Debugf("%s: rendering with ctx: %v", sf.SourceFile, sf.Metadata)
 		output, err := RenderTemplate(
@@ -80,7 +80,7 @@ func main() {
 			continue
 		}
 
-		outputFile := *outputPath + "/" + sf.Output() + "." + *outputExtension
+		outputFile := *outputPath + "/" + sf.getString(*outputKey) + "." + *outputExtension
 		if err := WriteOutput(output, outputFile); err != nil {
 			Logf("%s: writing: %s", sf.SourceFile, err)
 			continue
