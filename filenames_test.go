@@ -90,3 +90,30 @@ func TestFilenames(t *testing.T) {
 		}
 	}
 }
+
+func TestBlogEntryRegex(t *testing.T) {
+	m := map[string][]string{
+		"2000-12-01-foo":           []string{"2000", "12", "01", "Foo"},
+		"2000-12-01-foo-bar":       []string{"2000", "12", "01", "Foo bar"},
+		"2000-12-01-foo.bar":       []string{"2000", "12", "01", "Foo.bar"},
+		"2000-12-01-a-foo.bar-baz": []string{"2000", "12", "01", "A foo.bar baz"},
+	}
+	for basename, expected := range m {
+		got, err := parseBlogEntryRegex(basename)
+		if err != nil {
+			t.Errorf("%s: %s", basename, err)
+			continue
+		}
+		if len(got) != len(expected) {
+			t.Errorf("%s: expected %s, got %s", basename, expected, got)
+			continue
+		}
+		for i := 0; i < len(got); i++ {
+			if got[i] != expected[i] {
+				t.Errorf("%s: expected %s, got %s", basename, expected, got)
+				continue
+			}
+		}
+		t.Logf("%s: %s OK", basename, got)
+	}
+}

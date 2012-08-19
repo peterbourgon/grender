@@ -8,7 +8,7 @@ import (
 
 const (
 	MaxGetCount = 999999999
-	YYYYMMDDT   = "([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9A-Za-z_-]+)"
+	YYYYMMDDT   = `([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9A-Za-z_\-\.]+)`
 )
 
 var (
@@ -33,8 +33,8 @@ func NewSourceFile(filename string) *SourceFile {
 	}
 }
 
-func (sf *SourceFile) parseBlogEntryRegex() ([]string, error) {
-	a := R.FindAllStringSubmatch(sf.Basename, -1)
+func parseBlogEntryRegex(basename string) ([]string, error) {
+	a := R.FindAllStringSubmatch(basename, -1)
 	if a == nil || len(a) <= 0 || len(a[0]) != 5 {
 		return nil, fmt.Errorf("not a blog entry")
 	}
@@ -49,7 +49,7 @@ func (sf *SourceFile) parseBlogEntryRegex() ([]string, error) {
 }
 
 func (sf *SourceFile) Indexable() bool {
-	if _, err := sf.parseBlogEntryRegex(); err != nil {
+	if _, err := parseBlogEntryRegex(sf.Basename); err != nil {
 		return false
 	}
 	return true
@@ -57,7 +57,7 @@ func (sf *SourceFile) Indexable() bool {
 
 func (sf *SourceFile) BlogEntry() (y, m, d, t string, err error) {
 	var a []string
-	a, err = sf.parseBlogEntryRegex()
+	a, err = parseBlogEntryRegex(sf.Basename)
 	if err != nil {
 		return
 	}
