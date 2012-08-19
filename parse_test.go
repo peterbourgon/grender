@@ -132,7 +132,24 @@ func TestAutopopulatedTitles(t *testing.T) {
 	}
 }
 
-const titledContent = `
+func TestBlogBlogOutputURL(t *testing.T) {
+	sourceFilename := "blog/2012-01-01-hello.md"
+	tempDir := writeSourceFile(t, sourceFilename, simplestBody)
+	defer os.RemoveAll(tempDir)
+
+	sf, err := ParseSourceFile(sourceFilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// note lack of leading forward slash
+	expected := "blog/2012-01-01-hello." + *outputExtension
+	if got := sf.getString(URLKey); got != expected {
+		t.Errorf("got '%s', expected '%s'", got, expected)
+	}
+}
+
+const titledBody = `
 template: nosuch.template
 title: The INDEX TITLE!! from the Meta Data
 ---
@@ -141,7 +158,7 @@ Content of the thing.
 
 func TestMergeIndexMetadata(t *testing.T) {
 	filename := "2012-01-01-test-proper-merge-of-index.md"
-	tempDir := writeSourceFile(t, filename, titledContent)
+	tempDir := writeSourceFile(t, filename, titledBody)
 	defer os.RemoveAll(tempDir)
 
 	sf, err := ParseSourceFile(filename)
@@ -157,7 +174,7 @@ func TestMergeIndexMetadata(t *testing.T) {
 
 func TestGlobalIndex(t *testing.T) {
 	filename := "2012-01-01-testing-global-index.md"
-	tempDir := writeSourceFile(t, filename, titledContent)
+	tempDir := writeSourceFile(t, filename, titledBody)
 	defer os.RemoveAll(tempDir)
 
 	sf, err := ParseSourceFile(filename)
