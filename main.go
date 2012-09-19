@@ -80,10 +80,16 @@ func main() {
 			continue
 		}
 
-		outputFile := *outputPath + "/" + sf.getString(*outputKey) + "." + *outputExtension
+		outputURL := sf.getString(*outputKey)
+		outputFile := fmt.Sprintf("%s/%s", *outputPath, outputURL)
 		if err := WriteOutput(output, outputFile); err != nil {
-			Logf("%s: writing: %s", sf.SourceFile, err)
+			Logf("%s: writing %s: %s", sf.SourceFile, outputFile, err)
 			continue
+		}
+
+		// Blog entries get redirect pages written
+		if y, m, d, t, err := sf.BlogEntry(); err == nil {
+			WriteRedirectsFor(y, m, d, t, outputURL)
 		}
 	}
 }

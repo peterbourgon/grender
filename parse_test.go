@@ -96,7 +96,7 @@ func TestDeducedOutputFilename(t *testing.T) {
 		}
 
 		got := sf.getString(*outputKey)
-		expected := Basename(tempDir, sourceFilename)
+		expected := Basename(tempDir, sourceFilename) + ".html"
 		if got != expected {
 			t.Errorf("expected '%s', got '%s'", expected, got)
 			continue
@@ -123,12 +123,6 @@ func TestAutopopulatedTitles(t *testing.T) {
 			t.Errorf("%s: got '%s', expected '%s'", tempFile, gotTitle, expectedTitle)
 			continue
 		}
-
-		expectedURL := *blogPath + "/" + Basename("", tempFile) + "." + *outputExtension
-		if gotURL := sf.getString(URLKey); gotURL != expectedURL {
-			t.Errorf("%s: got '%s', expected '%s'", tempFile, gotURL, expectedURL)
-			continue
-		}
 	}
 }
 
@@ -143,8 +137,8 @@ func TestBlogBlogOutputURL(t *testing.T) {
 	}
 
 	// note lack of leading forward slash
-	expected := "blog/2012-01-01-hello." + *outputExtension
-	if got := sf.getString(URLKey); got != expected {
+	expected := "blog/2012/01/01/hello." + *outputExtension
+	if got := sf.getString(*outputKey); got != expected {
 		t.Errorf("got '%s', expected '%s'", got, expected)
 	}
 }

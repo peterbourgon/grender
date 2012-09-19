@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -40,12 +41,22 @@ func parseBlogEntryRegex(basename string) ([]string, error) {
 	}
 
 	toks := a[0][1:]
-	toks[3] = strings.Replace(toks[3], "-", " ", -1)
-	if len(toks[3]) > 1 {
-		toks[3] = strings.ToTitle(toks[3])[:1] + toks[3][1:]
-	}
-
+	toks[3] = Filename2Display(toks[3])
 	return toks, nil
+}
+
+func Filename2Display(title string) string {
+	title = strings.Replace(title, "-", " ", -1)
+	if len(title) > 1 {
+		title = strings.ToTitle(title)[:1] + title[1:]
+	}
+	return title
+}
+
+func Display2Filename(title string) string {
+	title = strings.Replace(title, " ", "-", -1)
+	title = strings.ToLower(title)
+	return title
 }
 
 func (sf *SourceFile) Indexable() bool {
@@ -55,15 +66,27 @@ func (sf *SourceFile) Indexable() bool {
 	return true
 }
 
-func (sf *SourceFile) BlogEntry() (y, m, d, t string, err error) {
-	var a []string
-	a, err = parseBlogEntryRegex(sf.Basename)
+func (sf *SourceFile) BlogEntry() (y, m, d int, t string, err error) {
+	a, err := parseBlogEntryRegex(sf.Basename)
+	if err != nil {
+		return 0, 0, 0, "", err
+	}
+
+	yStr, mStr, dStr := a[0], a[1], a[2]
+	y64, err := strconv.ParseInt(yStr, 10, 32)
+	if err != nil {
+		return 0, 0, 0, "", err
+	}
+	m64, err := strconv.ParseInt(mStr, 10, 32)
+	if err != nil {
+		return 0, 0, 0, "", err
+	}
+	d64, err := strconv.ParseInt(dStr, 10, 32)
 	if err != nil {
 		return
 	}
 
-	y, m, d, t = a[0], a[1], a[2], a[3]
-	return
+	return int(y64), int(m64), int(d64), a[3], nil
 }
 
 func (sf *SourceFile) getAbstract(key string) interface{} {

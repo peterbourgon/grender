@@ -42,20 +42,23 @@ func ParseSourceFile(filename string) (sf *SourceFile, err error) {
 
 	// if the filename looks like a blog entry, autopopulate some metadata
 	if y, m, d, t, err := sf.BlogEntry(); err == nil {
-		// _source/foo/2012-01-01-title.md
-		// should become _site/blog/2012-01-01-title.html
-		//       and NOT _site/blog/foo/2012-01-01-title.html
-		strippedFilename := filepath.Base(sf.Basename)
-		outputPath := fmt.Sprintf("%s/%s", *blogPath, strippedFilename)
+		outputPath := fmt.Sprintf(
+			"%s/%4d/%02d/%02d/%s.%s",
+			*blogPath,
+			y,
+			m,
+			d,
+			Display2Filename(t),
+			*outputExtension,
+		)
 
 		sf.Metadata[*outputKey] = outputPath
 		sf.Metadata[*sortkeyKey] = sf.Basename
-		sf.Metadata[YearKey] = y
-		sf.Metadata[MonthKey] = m
-		sf.Metadata[DayKey] = d
+		sf.Metadata[YearKey] = fmt.Sprintf("%4d", y)
+		sf.Metadata[MonthKey] = fmt.Sprintf("%02d", m)
+		sf.Metadata[DayKey] = fmt.Sprintf("%02d", d)
 		sf.Metadata[TitleKey] = t
-
-		sf.Metadata[URLKey] = fmt.Sprintf("%s.%s", sf.getString(*outputKey), *outputExtension)
+		sf.Metadata[URLKey] = outputPath
 	}
 
 	// read remaining metadata as YAML
@@ -69,7 +72,11 @@ func ParseSourceFile(filename string) (sf *SourceFile, err error) {
 		return
 	}
 	if sf.getString(*outputKey) == "" {
-		sf.Metadata[*outputKey] = Basename(*sourcePath, filename)
+		sf.Metadata[*outputKey] = fmt.Sprintf(
+			"%s.%s",
+			Basename(*sourcePath, filename),
+			*outputExtension,
+		)
 	}
 
 	err = nil // just in case
