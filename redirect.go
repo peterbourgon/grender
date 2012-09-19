@@ -31,6 +31,7 @@ func WriteRedirectsFor(y, m, d int, t, dstURL string) {
 	redirectFiles := []string{
 		fmt.Sprintf("%s/%4d-%02d-%02d-%s.%s", prefix, y, m, d, t, *outputExtension),
 		fmt.Sprintf("%s/%4d-%02d-%02d.%s", prefix, y, m, d, *outputExtension),
+		fmt.Sprintf("%s/%4d/%02d/%02d/index.%s", prefix, y, m, d, *outputExtension),
 	}
 
 	// if necessary, redirect YYYY/M/DD/TTTTT.html and YYYY/M/DD/index.html
