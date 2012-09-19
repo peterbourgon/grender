@@ -102,8 +102,7 @@ title: My entry name
 year: 2012
 month: 01
 day: 02
-output: [-output-path]/[-blog-path]/YYYY-MM-DD-my-entry-name.[-output-extension]
-url: [-blog-path]/2012-01-02-my-entry-name.[-output-extension]
+url: [-blog-path]/2012/01/02/my-entry-name.[-output-extension]
 sortkey: 2012-01-02-my-entry-name
 ```
 
