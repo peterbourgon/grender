@@ -22,13 +22,10 @@ Alternately, every major release of Grender has binary releases available.
 
 ## v1.0.0
 
-* [Mac OS X 64bit][darwin-amd64-1.0.0]
-* [Mac OS X 32bit][darwin-386-1.0.0] (you probably want 64bit)
+* [Mac OS X 64bit](http://files.bourgon.org/grender/grender-1.0.0-darwin-amd64)
+* [Mac OS X 32bit](http://files.bourgon.org/grender/grender-1.0.0-darwin-386) (you probably want 64bit)
 * Linux amd64 (coming soon)
 * Linux 386 (coming soon)
-
-[download-1.0.0-darwin-amd64]: http://files.bourgon.org/grender/grender-1.0.0-darwin-amd64
-[download-1.0.0-darwin-386]: http://files.bourgon.org/grender/grender-1.0.0-darwin-386
 
 
 # Using Grender
