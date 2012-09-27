@@ -8,6 +8,31 @@ to produce a website.
 [1]: https://secure.travis-ci.org/peterbourgon/grender.png
 [2]: http://www.travis-ci.org/peterbourgon/grender
 
+# Installing Grender
+
+If you have a working [Go installation](http://golang.org/doc/install), you
+can clone this repo and build Grender yourself.
+
+    $ git clone git@github.com:peterbourgon/grender.git
+    $ cd grender
+    $ go get -d # get dependencies
+    $ go build  # build
+
+Alternately, every major release of Grender has binary releases available.
+
+## v1.0.0
+
+* [Mac OS X 64bit][darwin-amd64-1.0.0]
+* [Mac OS X 32bit][darwin-386-1.0.0] (you probably want 64bit)
+* Linux amd64 (coming soon)
+* Linux 386 (coming soon)
+
+[download-1.0.0-darwin-amd64]: http://files.bourgon.org/grender/grender-1.0.0-darwin-amd64
+[download-1.0.0-darwin-386]: http://files.bourgon.org/grender/grender-1.0.0-darwin-386
+
+
+# Using Grender
+
 ## File types
 
 ### Source files
