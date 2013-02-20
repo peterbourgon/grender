@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
@@ -25,15 +26,17 @@ func splitPath(path string) []string {
 }
 
 // diffPath gives the relative path from base for complete. complete must have
-// base as a prefix; otherwise, diffPath returns complete, unaltered.
+// base as a prefix.
 func diffPath(base, complete string) string {
 	base, complete = filepath.Clean(base), filepath.Clean(complete)
 
 	if len(complete) <= len(base) {
-		return complete
+		fmt.Printf("diffPath('%s', '%s') invalid (length)\n", base, complete)
+		os.Exit(1)
 	}
 	if complete[:len(base)] != base {
-		return complete
+		fmt.Printf("diffPath('%s', '%s') invalid (prefix)\n", base, complete)
+		os.Exit(1)
 	}
 
 	d := complete[len(base):]
@@ -43,23 +46,43 @@ func diffPath(base, complete string) string {
 	return d
 }
 
-// copyFile copies src to dst using primitives from the os package.
-func copyFile(dst, src string) error {
-	return fmt.Errorf("not yet implemented")
+// copyFile copies src to dst.
+func copyFile(dst, src string) {
+	mustWrite(dst, mustRead(src))
 }
 
-// readJSON interprets the content of filename as JSON data, and returns a
-// map of that data or an error.
-func readJSON(filename string) (map[string]interface{}, error) {
+// mustRead returns the content of the passed filename.
+func mustRead(filename string) []byte {
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, err
+		fmt.Printf("%s: %s\n", filename, err)
+		os.Exit(1)
 	}
+	return buf
+}
 
+// readJSON parses the passed JSON buffer and returns a map.
+func mustJSON(buf []byte) map[string]interface{} {
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(buf, &m); err != nil {
-		return nil, err
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
 	}
+	return m
+}
 
-	return m, nil
+// writeTo writes the buffer to the target file.
+func mustWrite(tgt string, buf []byte) {
+	os.MkdirAll(filepath.Dir(tgt), 0777)
+	if err := ioutil.WriteFile(tgt, buf, 0755); err != nil {
+		fmt.Printf("%s: %s\n", tgt, err)
+		os.Exit(1)
+	}
+}
+
+// targetFor returns the target filename for the given source filename.
+func targetFor(filename string) string {
+	dst := filepath.Clean(*targetDir + string(os.PathSeparator) + diffPath(*sourceDir, filename))
+	n := len(dst) - len(filepath.Ext(dst))
+	return dst[:n] + ".html"
 }

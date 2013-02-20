@@ -34,7 +34,6 @@ func TestDiffPath(t *testing.T) {
 		tuple{"/foo//src/", "/foo/src/a/b.json"}:  "a/b.json",
 		tuple{"/foo/src//", "/foo/src/a/b.json"}:  "a/b.json",
 		tuple{"/foo/src///", "/foo/src/a/b.json"}: "a/b.json",
-		tuple{"/foo/bar", "/foo/baz/bang.txt"}:    "/foo/baz/bang.txt",
 	} {
 		if got := diffPath(tu.base, tu.complete); expected != got {
 			t.Errorf("diffPath(%s, %s): expected %s, got %s", tu.base, tu.complete, expected, got)
@@ -58,11 +57,7 @@ func TestReadJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m, err := readJSON(tmpFile.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	m := mustJSON(mustRead(tmpFile.Name()))
 	a, ok := m["a"]
 	if !ok {
 		t.Fatal("'a' not present")
