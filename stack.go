@@ -2,7 +2,6 @@ package main
 
 import (
 	"path/filepath"
-	"strings"
 )
 
 // Stack stores a set of keyed map[string]interface{} metadata.
@@ -24,7 +23,7 @@ func NewStack() *Stack {
 }
 
 func (s *Stack) Add(path string, m map[string]interface{}) {
-	key := strings.Join(splitPath(path), string(filepath.Separator))
+	key := filepath.Join(splitPath(path)...)
 	s.m[key] = m
 }
 

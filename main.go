@@ -3,9 +3,9 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
 	"github.com/russross/blackfriday"
 	"html/template"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -20,12 +20,13 @@ var (
 )
 
 func init() {
+	log.SetFlags(0)
 	flag.Parse()
 
 	var err error
 	for _, s := range []*string{sourceDir, targetDir} {
 		if *s, err = filepath.Abs(*s); err != nil {
-			fmt.Printf("%s", err)
+			log.Printf("%s", err)
 			os.Exit(1)
 		}
 	}
@@ -41,13 +42,13 @@ func sourceWalk() filepath.WalkFunc {
 	readAndAdd := func(path string) {
 		m := mustJSON(mustRead(path))
 		s.Add(filepath.Dir(path), m)
-		fmt.Printf("%-70s added to stack: %v\n", path, m)
+		log.Printf("%-50s added to stack: %v", path, m)
 	}
 
 	cp := func(path string) {
 		dst := filepath.Join(*targetDir, diffPath(*sourceDir, path))
 		copyFile(dst, path)
-		fmt.Printf("%-70s copied to %s\n", path, dst)
+		log.Printf("%-50s copied to %s", path, dst)
 	}
 
 	type specificRenderFunc func(input []byte, m map[string]interface{}) []byte
@@ -63,19 +64,30 @@ func sourceWalk() filepath.WalkFunc {
 			output := f(input, s.Get(path))
 			dst := targetFor(path)
 			mustWrite(dst, output)
-			fmt.Printf("%-70s rendered to %s\n", path, dst)
+			log.Printf("%-50s rendered to %s", path, dst)
 		}
 	}
 
 	renderHTML := func(input []byte, m map[string]interface{}) []byte {
-		tmpl, err := template.New("x").Parse(string(input))
+		funcMap := template.FuncMap{
+			"importcss": func(filename string) template.CSS {
+				return template.CSS(mustRead(filepath.Join(*sourceDir, filename)))
+			},
+			"importjs": func(filename string) template.JS {
+				return template.JS(mustRead(filepath.Join(*sourceDir, filename)))
+			},
+			"importhtml": func(filename string) template.HTML {
+				return template.HTML(mustRead(filepath.Join(*sourceDir, filename)))
+			},
+		}
+		tmpl, err := template.New("x").Funcs(funcMap).Parse(string(input))
 		if err != nil {
-			fmt.Printf("%s\n", err)
+			log.Printf("%s", err)
 			os.Exit(1)
 		}
 		output := bytes.Buffer{}
 		if err := tmpl.Execute(&output, m); err != nil {
-			fmt.Printf("%s\n", err)
+			log.Printf("%s", err)
 			os.Exit(1)
 		}
 		return output.Bytes()
@@ -96,10 +108,13 @@ func sourceWalk() filepath.WalkFunc {
 		return blackfriday.Markdown(input, htmlRenderer, mdOptions)
 	}
 
+	noop := func(string) {}
+
 	ext := map[string]func(path string){
-		".json": readAndAdd,
-		".html": frontMatter(renderHTML),
-		".md":   frontMatter(renderMarkdown),
+		".json":   readAndAdd,
+		".html":   frontMatter(renderHTML),
+		".md":     frontMatter(renderMarkdown),
+		".source": noop,
 	}
 
 	return func(path string, info os.FileInfo, _ error) error {

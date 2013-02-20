@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -31,11 +31,11 @@ func diffPath(base, complete string) string {
 	base, complete = filepath.Clean(base), filepath.Clean(complete)
 
 	if len(complete) <= len(base) {
-		fmt.Printf("diffPath('%s', '%s') invalid (length)\n", base, complete)
+		log.Printf("diffPath('%s', '%s') invalid (length)", base, complete)
 		os.Exit(1)
 	}
 	if complete[:len(base)] != base {
-		fmt.Printf("diffPath('%s', '%s') invalid (prefix)\n", base, complete)
+		log.Printf("diffPath('%s', '%s') invalid (prefix)", base, complete)
 		os.Exit(1)
 	}
 
@@ -55,7 +55,7 @@ func copyFile(dst, src string) {
 func mustRead(filename string) []byte {
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
-		fmt.Printf("%s: %s\n", filename, err)
+		log.Printf("%s: %s", filename, err)
 		os.Exit(1)
 	}
 	return buf
@@ -65,7 +65,7 @@ func mustRead(filename string) []byte {
 func mustJSON(buf []byte) map[string]interface{} {
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(buf, &m); err != nil {
-		fmt.Printf("%s\n", err)
+		log.Printf("%s", err)
 		os.Exit(1)
 	}
 	return m
@@ -75,14 +75,14 @@ func mustJSON(buf []byte) map[string]interface{} {
 func mustWrite(tgt string, buf []byte) {
 	os.MkdirAll(filepath.Dir(tgt), 0777)
 	if err := ioutil.WriteFile(tgt, buf, 0755); err != nil {
-		fmt.Printf("%s: %s\n", tgt, err)
+		log.Printf("%s: %s", tgt, err)
 		os.Exit(1)
 	}
 }
 
 // targetFor returns the target filename for the given source filename.
 func targetFor(filename string) string {
-	dst := filepath.Clean(*targetDir + string(os.PathSeparator) + diffPath(*sourceDir, filename))
+	dst := filepath.Clean(filepath.Join(*targetDir, diffPath(*sourceDir, filename)))
 	n := len(dst) - len(filepath.Ext(dst))
 	return dst[:n] + ".html"
 }
