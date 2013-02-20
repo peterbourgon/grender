@@ -1,10 +1,18 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
+	"strings"
 )
 
+// Stack stores a set of keyed map[string]interface{} metadata.
+// The key is specified during Add, and is assumed to be a valid
+// file path. Get supplies a path, and returns the union of all
+// Added metadata along every step in the given path.
+//
+// For example, Get("/foo/bar/baz") returns merged metadata for "/foo",
+// "/foo/bar", and "/foo/bar/baz". In this way, the Stack enables the
+// 'stackable' Grender context behavior.
 type Stack struct {
 	m map[string]map[string]interface{} // path: partial-metadata
 }
@@ -16,8 +24,8 @@ func NewStack() *Stack {
 }
 
 func (s *Stack) Add(path string, m map[string]interface{}) {
-	println("Add", path, "yields", filepath.Clean(path))
-	s.m[filepath.Clean(path)] = m
+	key := strings.Join(splitPath(path), string(filepath.Separator))
+	s.m[key] = m
 }
 
 func (s *Stack) Get(path string) map[string]interface{} {
@@ -26,11 +34,9 @@ func (s *Stack) Get(path string) map[string]interface{} {
 	if len(list) <= 0 {
 		return m
 	}
-	fmt.Printf("Get '%s' split to '%v'\n", path, list)
 
 	for i, _ := range list {
 		key := filepath.Join(list[:i+1]...)
-		println("Get", path, "getting", key)
 		if m0, ok := s.m[key]; ok {
 			m = mergeInto(m, m0)
 		}
@@ -38,6 +44,8 @@ func (s *Stack) Get(path string) map[string]interface{} {
 	return m
 }
 
+// mergeInto merges the src map into the dst map, returning the union.
+// Key collisions are handled by preferring src.
 func mergeInto(dst, src map[string]interface{}) map[string]interface{} {
 	for k, v := range src {
 		dst[k] = v

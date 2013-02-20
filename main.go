@@ -29,29 +29,40 @@ func main() {
 }
 
 func sourceWalk() filepath.WalkFunc {
-	stack := map[string]map[string]interface{}{}
+	s := NewStack()
+
+	readAndAdd := func(path string) {
+		m, err := readJSON(path)
+		if err != nil {
+			fmt.Printf("%s: %s\n", path, err)
+			os.Exit(2)
+		}
+		s.Add(filepath.Dir(path), m)
+		fmt.Printf("%-70s added to stack: %v\n", path, m)
+	}
+
+	cp := func(path string) {
+		dst := filepath.Join(*targetDir, diffPath(*sourceDir, path))
+		copyFile(dst, path)
+		fmt.Printf("%-70s copied to %s\n", path, dst)
+	}
+
+	ext := map[string]func(path string){
+		".json": readAndAdd,
+		".htm":  cp,
+		".html": cp,
+	}
+
 	return func(path string, info os.FileInfo, _ error) error {
-		fmt.Printf("entering '%s', stack=%v\n", path, stack)
 		if info.IsDir() {
 			return nil // descend
 		}
 
-		switch filepath.Ext(path) {
-		case ".json":
-			m, err := readJSON(path)
-			if err != nil {
-				fmt.Printf("%s: %s\n", path, err)
-				os.Exit(2)
-			}
-			stack[filepath.Dir(path)] = m
-
-		case ".htm", ".html":
-			copyFile(filepath.Join(*targetDir, diffPath(*sourceDir, path)), path)
-
-		default:
-			fmt.Printf("%s: no action\n", path)
+		if f, ok := ext[filepath.Ext(path)]; ok {
+			f(path)
+		} else {
+			fmt.Printf("%-70s no action\n", path)
 		}
-
 		return nil
 	}
 }
