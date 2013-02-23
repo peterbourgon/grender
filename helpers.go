@@ -47,7 +47,7 @@ func diffPath(base, complete string) string {
 }
 
 // copyFile copies src to dst.
-func copyFile(dst, src string) {
+func mustCopyFile(dst, src string) {
 	mustWrite(dst, mustRead(src))
 }
 
@@ -81,8 +81,24 @@ func mustWrite(tgt string, buf []byte) {
 }
 
 // targetFor returns the target filename for the given source filename.
-func targetFor(filename string) string {
-	dst := filepath.Clean(filepath.Join(*targetDir, diffPath(*sourceDir, filename)))
+func targetFor(sourceFilename, ext string) string {
+	relativePath := diffPath(*sourceDir, sourceFilename)
+	dst := filepath.Clean(filepath.Join(*targetDir, relativePath))
 	n := len(dst) - len(filepath.Ext(dst))
-	return dst[:n] + ".html"
+	return dst[:n] + ext
+}
+
+func mustTemplate(s *Stack, path string) []byte {
+	template, ok := s.Get(path)["template"]
+	if !ok {
+		log.Printf("%s: no template", path)
+		os.Exit(1)
+	}
+	templateStr, ok := template.(string)
+	if !ok {
+		log.Printf("%s: bad type for template key", path)
+		os.Exit(1)
+	}
+	templateFile := filepath.Join(filepath.Dir(path), templateStr)
+	return mustRead(templateFile)
 }
