@@ -69,7 +69,7 @@ func gatherGlobals(s *Stack) filepath.WalkFunc {
 			for k, v := range mustJSON(mustRead(path)) {
 				if _, ok := Globals[k]; ok {
 					subMetadata := map[string]interface{}{k: v}
-					s.Add(filepath.Dir(path), subMetadata) // this dir
+					s.Add("", subMetadata) // this dir
 				}
 			}
 		case ".html", ".md":
@@ -78,7 +78,7 @@ func gatherGlobals(s *Stack) filepath.WalkFunc {
 				for k, v := range mustJSON(metadataBuf) {
 					if _, ok := Globals[k]; ok {
 						subMetadata := map[string]interface{}{k: v}
-						s.Add(path, subMetadata) // this file only
+						s.Add("", subMetadata) // this file only
 					}
 				}
 			}

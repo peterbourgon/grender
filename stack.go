@@ -25,7 +25,13 @@ func NewStack() *Stack {
 
 func (s *Stack) Add(path string, m map[string]interface{}) {
 	key := filepath.Join(splitPath(path)...)
-	s.m[key] = m
+
+	existing, ok := s.m[key]
+	if !ok {
+		existing = map[string]interface{}{}
+	}
+
+	s.m[key] = mergeInto(existing, m)
 }
 
 func (s *Stack) Get(path string) map[string]interface{} {
@@ -34,9 +40,13 @@ func (s *Stack) Get(path string) map[string]interface{} {
 		return map[string]interface{}{}
 	}
 
+	// A weird bit of trickery. We add global keys with a 'path' of "" (empty
+	// string) with the expectation that Get will return them for every input
+	// path. So, we prepend "" to every lookup request. That means 'i' is off-
+	// by-one, so we can use it directly against the list slice.
 	m := map[string]interface{}{}
-	for i, _ := range list {
-		key := filepath.Join(list[:i+1]...)
+	for i, _ := range append([]string{""}, list...) {
+		key := filepath.Join(list[:i]...)
 		if m0, ok := s.m[key]; ok {
 			m = mergeInto(m, m0)
 		}
@@ -59,6 +69,7 @@ func splitPath(path string) []string {
 // Key collisions are handled by preferring src.
 func mergeInto(tgt, src map[string]interface{}) map[string]interface{} {
 	for k, v := range src {
+		// TODO recursive merge of maps to some reasonable depth
 		tgt[k] = v
 	}
 	return tgt

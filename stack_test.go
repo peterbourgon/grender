@@ -28,6 +28,58 @@ func TestAddGet(t *testing.T) {
 	assert(s.Get("/a/foo.txt"), "a", "A")
 }
 
+func TestAddForGlobal(t *testing.T) {
+	assert := func(ctx string, m map[string]string, key, expected string) {
+		if got := m[key]; expected != got {
+			t.Fatalf("%s: m['%s'] expected '%s' got '%s'", ctx, key, expected, got)
+		}
+	}
+
+	s := NewStack()
+
+	func() {
+		s.Add("", map[string]interface{}{"a": map[string]string{"first": "OK"}})
+		v, ok := s.Get("/some/arbitrary/path")["a"]
+		if !ok {
+			t.Fatalf("didn't get 'a'")
+		}
+		m, ok := v.(map[string]string)
+		if !ok {
+			t.Fatalf("bad type for 'a'")
+		}
+		assert("take 1", m, "first", "OK")
+	}()
+	/* TODO
+	func() {
+		s.Add("", map[string]interface{}{"a": map[string]string{"second": "K"}})
+		v, ok := s.Get("/some/other/deeper/path.html")["a"]
+		if !ok {
+			t.Fatalf("didn't get 'a'")
+		}
+		m, ok := v.(map[string]string)
+		if !ok {
+			t.Fatalf("bad type for 'a'")
+		}
+		assert("add 'second'", m, "first", "OK")
+		assert("add 'second'", m, "second", "K")
+	}()
+
+	func() {
+		s.Add("", map[string]interface{}{"a": map[string]string{"first": "NO"}})
+		v, ok := s.Get("/path.md")["a"]
+		if !ok {
+			t.Fatalf("didn't get 'a'")
+		}
+		m, ok := v.(map[string]string)
+		if !ok {
+			t.Fatalf("bad type for 'a'")
+		}
+		assert("overwrite 'first'", m, "first", "NO")
+		assert("overwrite 'first'", m, "second", "K")
+	}()
+	*/
+}
+
 func TestSplitPath(t *testing.T) {
 	assert := func(a, b []string) {
 		if len(a) != len(b) {
