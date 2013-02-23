@@ -28,6 +28,30 @@ func TestAddGet(t *testing.T) {
 	assert(s.Get("/a/foo.txt"), "a", "A")
 }
 
+func TestSplitPath(t *testing.T) {
+	assert := func(a, b []string) {
+		if len(a) != len(b) {
+			t.Fatalf("%v != %v", a, b)
+		}
+		for i := 0; i < len(a); i++ {
+			if a[i] != b[i] {
+				t.Fatalf("%v != %v", a, b)
+			}
+		}
+	}
+
+	for path, expected := range map[string][]string{
+		"":                 []string{},
+		"foo":              []string{"foo"},
+		"/foo":             []string{"foo"},
+		"foo/":             []string{"foo"},
+		"a/b/c.d":          []string{"a", "b", "c.d"},
+		"/foo/bar/baz.txt": []string{"foo", "bar", "baz.txt"},
+	} {
+		assert(splitPath(path), expected)
+	}
+}
+
 func TestMergeInto(t *testing.T) {
 	m := map[string]interface{}{}
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
 )
 
 // Stack stores a set of keyed map[string]interface{} metadata.
@@ -28,12 +29,12 @@ func (s *Stack) Add(path string, m map[string]interface{}) {
 }
 
 func (s *Stack) Get(path string) map[string]interface{} {
-	m := map[string]interface{}{}
 	list := splitPath(path)
 	if len(list) <= 0 {
-		return m
+		return map[string]interface{}{}
 	}
 
+	m := map[string]interface{}{}
 	for i, _ := range list {
 		key := filepath.Join(list[:i+1]...)
 		if m0, ok := s.m[key]; ok {
@@ -43,11 +44,22 @@ func (s *Stack) Get(path string) map[string]interface{} {
 	return m
 }
 
-// mergeInto merges the src map into the dst map, returning the union.
-// Key collisions are handled by preferring src.
-func mergeInto(dst, src map[string]interface{}) map[string]interface{} {
-	for k, v := range src {
-		dst[k] = v
+// splitPath tokenizes the given path string on filepath.Separator.
+func splitPath(path string) []string {
+	list := []string{}
+	for _, s := range strings.Split(path, string(filepath.Separator)) {
+		if s := strings.TrimSpace(s); s != "" {
+			list = append(list, s)
+		}
 	}
-	return dst
+	return list
+}
+
+// mergeInto merges the src map into the tgt map, returning the union.
+// Key collisions are handled by preferring src.
+func mergeInto(tgt, src map[string]interface{}) map[string]interface{} {
+	for k, v := range src {
+		tgt[k] = v
+	}
+	return tgt
 }

@@ -6,25 +6,6 @@ import (
 	"testing"
 )
 
-func TestSplitPath(t *testing.T) {
-	assert := func(a, b []string) {
-		if len(a) != len(b) {
-			t.Fatalf("%v != %v", a, b)
-		}
-		for i := 0; i < len(a); i++ {
-			if a[i] != b[i] {
-				t.Fatalf("%v != %v", a, b)
-			}
-		}
-	}
-
-	for path, expected := range map[string][]string{
-		"/foo/bar/baz.txt": []string{"foo", "bar", "baz.txt"},
-	} {
-		assert(splitPath(path), expected)
-	}
-}
-
 func TestDiffPath(t *testing.T) {
 	type tuple struct{ base, complete string }
 	for tu, expected := range map[tuple]string{
@@ -41,12 +22,40 @@ func TestDiffPath(t *testing.T) {
 	}
 }
 
-func TestCopyFile(t *testing.T) {
-	// TODO
+func TestMustCopy(t *testing.T) {
+	src, err := ioutil.TempFile(os.TempDir(), "grender-test-mustcopy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(src.Name())
+
+	srcBuf := "the contents of\nthe file\n"
+	if n, err := src.Write([]byte(srcBuf)); err != nil {
+		t.Fatal(err)
+	} else if n < len(srcBuf) {
+		t.Fatalf("short write")
+	}
+
+	dst := src.Name() + ".copy"
+	mustCopy(dst, src.Name())
+
+	dstBuf, err := ioutil.ReadFile(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(dstBuf) != len(srcBuf) {
+		t.Fatalf("dst (%d) != src (%d)", len(dstBuf), len(srcBuf))
+	}
+	for i := 0; i < len(srcBuf); i++ {
+		if dstBuf[i] != srcBuf[i] {
+			t.Fatalf("dst[%d] (%d) != src[%d] (%d)", i, dstBuf[i], i, srcBuf[i])
+		}
+	}
 }
 
-func TestReadJSON(t *testing.T) {
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "grender-test-")
+func TestMustJSON(t *testing.T) {
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "grender-test-mustjson")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,4 +90,27 @@ func TestReadJSON(t *testing.T) {
 	if i != 123 {
 		t.Fatal("'b' not 123")
 	}
+}
+
+func TestTargetFor(t *testing.T) {
+	type tuple struct{ relativePath, ext string }
+	for src, expected := range map[tuple]string{
+		tuple{"/foo", ""}:            *targetDir + "/foo",
+		tuple{"/foo", ".html"}:       *targetDir + "/foo.html",
+		tuple{"/foo.blah", ".html"}:  *targetDir + "/foo.html",
+		tuple{"/foo.html", ".blah"}:  *targetDir + "/foo.blah",
+		tuple{"/a/b/c", ".php"}:      *targetDir + "/a/b/c.php",
+		tuple{"/a/b/c.php", ".html"}: *targetDir + "/a/b/c.html",
+	} {
+		path, ext := *sourceDir+src.relativePath, src.ext
+		got := targetFor(path, ext)
+		if expected != got {
+			t.Errorf("%s: expected '%s', got '%s'", path, expected, got)
+		}
+	}
+}
+
+func TestMustTemplate(t *testing.T) {
+	// TODO
+	// rather a lot of setup involved here
 }

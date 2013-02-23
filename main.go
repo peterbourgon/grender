@@ -168,11 +168,10 @@ func transform(s *Stack) filepath.WalkFunc {
 
 		case ".source", ".template":
 			log.Printf("%s ignored", path)
-			break // ignore
 
 		default:
 			dst := filepath.Join(*targetDir, diffPath(*sourceDir, path))
-			mustCopyFile(targetFor(path, filepath.Ext(path)), path)
+			mustCopy(targetFor(path, filepath.Ext(path)), path)
 			log.Printf("%s copied to %s verbatim", path, dst)
 		}
 		return nil
