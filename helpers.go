@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/peterbourgon/mergemap"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,8 +14,7 @@ import (
 func mustRead(filename string) []byte {
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Printf("%s: %s", filename, err)
-		os.Exit(1)
+		Fatalf("%s: %s", filename, err)
 	}
 	return buf
 }
@@ -25,8 +23,7 @@ func mustRead(filename string) []byte {
 func mustWrite(tgt string, buf []byte) {
 	os.MkdirAll(filepath.Dir(tgt), 0777)
 	if err := ioutil.WriteFile(tgt, buf, 0755); err != nil {
-		log.Printf("%s: %s", tgt, err)
-		os.Exit(1)
+		Fatalf("%s: %s", tgt, err)
 	}
 }
 
@@ -36,12 +33,10 @@ func diffPath(base, complete string) string {
 	base, complete = filepath.Clean(base), filepath.Clean(complete)
 
 	if len(complete) < len(base) {
-		log.Printf("diffPath('%s', '%s') invalid (length)", base, complete)
-		os.Exit(1)
+		Fatalf("diffPath('%s', '%s') invalid (length)", base, complete)
 	}
 	if complete[:len(base)] != base {
-		log.Printf("diffPath('%s', '%s') invalid (prefix)", base, complete)
-		os.Exit(1)
+		Fatalf("diffPath('%s', '%s') invalid (prefix)", base, complete)
 	}
 
 	if len(complete) == len(base) {
@@ -64,8 +59,7 @@ func mustCopy(dst, src string) {
 func mustJSON(buf []byte) map[string]interface{} {
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(buf, &m); err != nil {
-		log.Printf("%s", err)
-		os.Exit(1)
+		Fatalf("%s", err)
 	}
 	return m
 }
@@ -84,13 +78,11 @@ func targetFor(sourceFilename, ext string) string {
 func mustTemplate(s StackReader, path string) []byte {
 	template, ok := s.Get(path)["template"]
 	if !ok {
-		log.Printf("%s: no template", path)
-		os.Exit(1)
+		Fatalf("%s: no template", path)
 	}
 	templateStr, ok := template.(string)
 	if !ok {
-		log.Printf("%s: bad type for template key", path)
-		os.Exit(1)
+		Fatalf("%s: bad type for template key", path)
 	}
 	templateFile := filepath.Join(filepath.Dir(path), templateStr)
 	return mustRead(templateFile)

@@ -6,7 +6,6 @@ import (
 	"github.com/peterbourgon/mergemap"
 	"github.com/russross/blackfriday"
 	"html/template"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -16,20 +15,20 @@ var (
 )
 
 var (
+	debug     = flag.Bool("debug", false, "print debug information (very verbose)")
+	verbose   = flag.Bool("verbose", false, "print verbose information")
 	sourceDir = flag.String("source", "src", "path to site source (input)")
 	targetDir = flag.String("target", "tgt", "path to site target (output)")
 	globalKey = flag.String("global.key", "files", "template node name for global info")
 )
 
 func init() {
-	log.SetFlags(0)
 	flag.Parse()
 
 	var err error
 	for _, s := range []*string{sourceDir, targetDir} {
 		if *s, err = filepath.Abs(*s); err != nil {
-			log.Printf("%s", err)
-			os.Exit(1)
+			Fatalf("%s", err)
 		}
 	}
 }
@@ -63,7 +62,7 @@ func gather(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc {
 		case ".json":
 			metadata := mustJSON(mustRead(path))
 			s.Add(filepath.Dir(path), metadata)
-			log.Printf("%s gathered (%d element(s))", path, len(metadata))
+			Infof("%s gathered (%d element(s))", path, len(metadata))
 
 		case ".html":
 			fullMetadata := map[string]interface{}{
@@ -79,7 +78,7 @@ func gather(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc {
 			}
 			fullMetadata = mergemap.Merge(fullMetadata, s.Get(path))
 			splatInto(m, diffPath(*sourceDir, path), fullMetadata)
-			log.Printf("%s gathered (%d element(s))", path, len(fullMetadata))
+			Infof("%s gathered (%d element(s))", path, len(fullMetadata))
 
 		case ".md":
 			fullMetadata := map[string]interface{}{
@@ -95,10 +94,10 @@ func gather(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc {
 			}
 			fullMetadata = mergemap.Merge(fullMetadata, s.Get(path))
 			splatInto(m, diffPath(*sourceDir, path), fullMetadata)
-			log.Printf("%s gathered (%d element(s))", path, len(fullMetadata))
+			Infof("%s gathered (%d element(s))", path, len(fullMetadata))
 
 		default:
-			log.Printf("%s ignored for gathering", path)
+			Infof("%s ignored for gathering", path)
 
 		}
 		return nil
@@ -112,7 +111,7 @@ func transform(s StackReader) filepath.WalkFunc {
 		}
 		switch filepath.Ext(path) {
 		case ".json":
-			log.Printf("%s ignored for transformation", path)
+			Infof("%s ignored for transformation", path)
 
 		case ".html":
 			_, contentBuf := splitMetadata(mustRead(path))
@@ -120,7 +119,7 @@ func transform(s StackReader) filepath.WalkFunc {
 			outputBuf := renderTemplate(path, contentBuf, metadata)
 			dst := targetFor(path, filepath.Ext(path))
 			mustWrite(dst, outputBuf)
-			log.Printf("%s transformed to %s", path, dst)
+			Infof("%s transformed to %s", path, dst)
 
 		case ".md":
 			_, contentBuf := splitMetadata(mustRead(path))
@@ -137,15 +136,15 @@ func transform(s StackReader) filepath.WalkFunc {
 			// write
 			dst := targetFor(path, ".html")
 			mustWrite(dst, outputBuf)
-			log.Printf("%s transformed to %s", path, dst)
+			Infof("%s transformed to %s", path, dst)
 
 		case ".source", ".template":
-			log.Printf("%s ignored for transformation", path)
+			Infof("%s ignored for transformation", path)
 
 		default:
 			dst := filepath.Join(*targetDir, diffPath(*sourceDir, path))
 			mustCopy(targetFor(path, filepath.Ext(path)), path)
-			log.Printf("%s transformed to %s verbatim", path, dst)
+			Infof("%s transformed to %s verbatim", path, dst)
 		}
 		return nil
 	}
@@ -164,15 +163,13 @@ func renderTemplate(path string, input []byte, metadata map[string]interface{}) 
 		},
 		"sortkey": sortedValues,
 	}
-	tmpl, err := template.New("x").Funcs(funcMap).Parse(string(input))
+	tmpl, err := template.New(diffPath(*sourceDir, path)).Funcs(funcMap).Parse(string(input))
 	if err != nil {
-		log.Printf("%s", err)
-		os.Exit(1)
+		Fatalf("%s", err)
 	}
 	output := bytes.Buffer{}
 	if err := tmpl.Execute(&output, metadata); err != nil {
-		log.Printf("%s", err)
-		os.Exit(1)
+		Fatalf("%s", err)
 	}
 	return output.Bytes()
 }
