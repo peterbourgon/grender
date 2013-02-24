@@ -82,8 +82,9 @@ The concept and application of composable metadata is grender's Secret Sauce™.
 ### Imports
 
 You can refer to the same content from multiple source files by using imports.
-Save the shared content in a file with the .source extension, and use one of the
-import directives to import it:
+Save the shared content in a file; use the .source extension so grender knows
+not to copy it to the target directory. Then use one of the import directives
+to import it:
 
 * `{{ importhtml "../relative/path.html.source" }}` for HTML snippets
 * `{{ importcss "../relative/path.css.source" }}` for CSS snippets
