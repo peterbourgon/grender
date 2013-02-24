@@ -12,7 +12,7 @@ produce a website.
 ## Installation
 
 If you have a working [Go installation](http://golang.org/doc/install), you
-can easily get an up-to-date Grender binary.
+can easily get an up-to-date grender binary.
 
     go get github.com/peterbourgon/grender
 
