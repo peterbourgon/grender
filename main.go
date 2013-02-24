@@ -19,7 +19,7 @@ var (
 	verbose   = flag.Bool("verbose", false, "print verbose information")
 	sourceDir = flag.String("source", "src", "path to site source (input)")
 	targetDir = flag.String("target", "tgt", "path to site target (output)")
-	globalKey = flag.String("global.key", "files", "template node name for global info")
+	globalKey = flag.String("global.key", "files", "template node name for per-file metadata")
 )
 
 func init() {
@@ -146,8 +146,8 @@ func transform(s StackReader) filepath.WalkFunc {
 			Infof("%s ignored for transformation", path)
 
 		default:
-			dst := filepath.Join(*targetDir, diffPath(*sourceDir, path))
-			mustCopy(targetFor(path, filepath.Ext(path)), path)
+			dst := targetFor(path, filepath.Ext(path))
+			mustCopy(dst, path)
 			Infof("%s transformed to %s verbatim", path, dst)
 		}
 		return nil
