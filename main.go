@@ -15,7 +15,7 @@ var (
 )
 
 var (
-	debug     = flag.Bool("debug", false, "print debug information (very verbose)")
+	debug     = flag.Bool("debug", false, "print debug information (implies verbose)")
 	verbose   = flag.Bool("verbose", false, "print verbose information")
 	sourceDir = flag.String("source", "src", "path to site source (input)")
 	targetDir = flag.String("target", "tgt", "path to site target (output)")
@@ -24,6 +24,10 @@ var (
 
 func init() {
 	flag.Parse()
+
+	if *debug {
+		*verbose = true
+	}
 
 	var err error
 	for _, s := range []*string{sourceDir, targetDir} {
@@ -153,17 +157,21 @@ func transform(s StackReader) filepath.WalkFunc {
 func renderTemplate(path string, input []byte, metadata map[string]interface{}) []byte {
 	funcMap := template.FuncMap{
 		"importcss": func(filename string) template.CSS {
-			return template.CSS(mustRead(filepath.Join(filepath.Dir(path), filename)))
+			filename = filepath.Join(filepath.Dir(path), filename)
+			return template.CSS(mustRead(filename))
 		},
 		"importjs": func(filename string) template.JS {
-			return template.JS(mustRead(filepath.Join(filepath.Dir(path), filename)))
+			filename = filepath.Join(filepath.Dir(path), filename)
+			return template.JS(mustRead(filename))
 		},
 		"importhtml": func(filename string) template.HTML {
-			return template.HTML(mustRead(filepath.Join(filepath.Dir(path), filename)))
+			filename = filepath.Join(filepath.Dir(path), filename)
+			return template.HTML(mustRead(filename))
 		},
 		"sortkey": sortedValues,
 	}
-	tmpl, err := template.New(diffPath(*sourceDir, path)).Funcs(funcMap).Parse(string(input))
+	templateName := diffPath(*sourceDir, path)
+	tmpl, err := template.New(templateName).Funcs(funcMap).Parse(string(input))
 	if err != nil {
 		Fatalf("%s", err)
 	}
