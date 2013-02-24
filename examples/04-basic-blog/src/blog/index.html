@@ -1,0 +1,20 @@
+{"entry":false}
+---
+<html>
+<head>
+<title>John Doe Blog Page</title>
+</head>
+<body>
+
+<h1>My blog entries</h1>
+
+<ul>
+{{ range sorted .files.blog }}
+	{{ if .entry }}
+		<li><a href="{{ .url }}">{{ .title }}</a></li>
+	{{ end }}
+{{ end }}
+</ul>
+
+</body>
+</html>
