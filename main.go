@@ -67,31 +67,33 @@ func gather(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc {
 
 		case ".html":
 			fullMetadata := map[string]interface{}{
-				"source": diffPath(*sourceDir, path),
-				"target": diffPath(*targetDir, targetFor(path, filepath.Ext(path))),
-				"url":    "/" + diffPath(*targetDir, targetFor(path, filepath.Ext(path))),
+				"source":  diffPath(*sourceDir, path),
+				"target":  diffPath(*targetDir, targetFor(path, filepath.Ext(path))),
+				"url":     "/" + diffPath(*targetDir, targetFor(path, filepath.Ext(path))),
+				"sortkey": filepath.Base(path),
 			}
 			metadataBuf, _ := splitMetadata(mustRead(path))
 			if len(metadataBuf) > 0 {
 				fileMetadata := mustJSON(metadataBuf)
 				s.Add(path, fileMetadata)
 			}
-			fullMetadata = mergemap.Merge(s.Get(path), fullMetadata)
+			fullMetadata = mergemap.Merge(fullMetadata, s.Get(path))
 			splatInto(m, diffPath(*sourceDir, path), fullMetadata)
 			log.Printf("%s gathered (%d element(s))", path, len(fullMetadata))
 
 		case ".md":
 			fullMetadata := map[string]interface{}{
-				"source": diffPath(*sourceDir, path),
-				"target": diffPath(*targetDir, targetFor(path, ".html")),
-				"url":    "/" + diffPath(*targetDir, targetFor(path, ".html")),
+				"source":  diffPath(*sourceDir, path),
+				"target":  diffPath(*targetDir, targetFor(path, ".html")),
+				"url":     "/" + diffPath(*targetDir, targetFor(path, ".html")),
+				"sortkey": filepath.Base(path),
 			}
 			metadataBuf, _ := splitMetadata(mustRead(path))
 			if len(metadataBuf) > 0 {
 				fileMetadata := mustJSON(metadataBuf)
 				s.Add(path, fileMetadata)
 			}
-			fullMetadata = mergemap.Merge(s.Get(path), fullMetadata)
+			fullMetadata = mergemap.Merge(fullMetadata, s.Get(path))
 			splatInto(m, diffPath(*sourceDir, path), fullMetadata)
 			log.Printf("%s gathered (%d element(s))", path, len(fullMetadata))
 
@@ -126,7 +128,7 @@ func transform(s StackReader) filepath.WalkFunc {
 			// render the markdown, and put it into the 'content' key of an
 			// interstitial metadata, to be fed to the template renderer
 			metadata := mergemap.Merge(s.Get(path), map[string]interface{}{
-				"content": renderMarkdown(contentBuf),
+				"content": template.HTML(renderMarkdown(contentBuf)),
 			})
 
 			// render the complete html output according to the template
@@ -160,6 +162,7 @@ func renderTemplate(path string, input []byte, metadata map[string]interface{}) 
 		"importhtml": func(filename string) template.HTML {
 			return template.HTML(mustRead(filepath.Join(filepath.Dir(path), filename)))
 		},
+		"sortkey": sortedValues,
 	}
 	tmpl, err := template.New("x").Funcs(funcMap).Parse(string(input))
 	if err != nil {

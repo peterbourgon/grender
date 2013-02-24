@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -133,3 +134,45 @@ func prettyPrint(i interface{}) string {
 	buf, _ := json.MarshalIndent(i, "# ", "    ")
 	return string(buf)
 }
+
+// sortedValues returns a slice of every value in the passed map, ordered by
+// the "sortkey" (if it exists) or the name of the entry (if it doesn't).
+func sortedValues(m map[string]interface{}) []interface{} {
+	mapping := map[string]string{} // sort key: original key
+	for name, element := range m {
+		submap, ok := element.(map[string]interface{})
+		if !ok {
+			mapping[name] = name
+			continue
+		}
+		sortkey, ok := submap["sortkey"]
+		if !ok {
+			mapping[name] = name
+			continue
+		}
+		sortkeyString, ok := sortkey.(string)
+		if !ok {
+			mapping[name] = name
+			continue
+		}
+		mapping[sortkeyString] = name
+	}
+
+	sortkeys := stringSlice{}
+	for sortkey, _ := range mapping {
+		sortkeys = append(sortkeys, sortkey)
+	}
+	sort.Sort(sortkeys)
+
+	orderedValues := []interface{}{}
+	for _, k := range sortkeys {
+		orderedValues = append(orderedValues, m[mapping[k]])
+	}
+	return orderedValues
+}
+
+type stringSlice []string
+
+func (a stringSlice) Len() int           { return len(a) }
+func (a stringSlice) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a stringSlice) Less(i, j int) bool { return a[i] > a[j] }
