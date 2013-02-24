@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"github.com/peterbourgon/mergemap"
 	"github.com/russross/blackfriday"
 	"html/template"
 	"log"
@@ -154,7 +155,7 @@ func transform(s *Stack) filepath.WalkFunc {
 
 			// render the markdown, and put it into the 'content' key of an
 			// interstitial metadata, to be fed to the template renderer
-			myMetadata := mergeInto(s.Get(path), map[string]interface{}{
+			myMetadata := mergemap.Merge(s.Get(path), map[string]interface{}{
 				"content": renderMarkdown(dataBuf),
 			})
 

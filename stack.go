@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/peterbourgon/mergemap"
 	"path/filepath"
 	"strings"
 )
@@ -31,7 +32,7 @@ func (s *Stack) Add(path string, m map[string]interface{}) {
 		existing = map[string]interface{}{}
 	}
 
-	s.m[key] = mergeInto(existing, m)
+	s.m[key] = mergemap.Merge(existing, m)
 }
 
 func (s *Stack) Get(path string) map[string]interface{} {
@@ -48,7 +49,7 @@ func (s *Stack) Get(path string) map[string]interface{} {
 	for i, _ := range append([]string{""}, list...) {
 		key := filepath.Join(list[:i]...)
 		if m0, ok := s.m[key]; ok {
-			m = mergeInto(m, m0)
+			m = mergemap.Merge(m, m0)
 		}
 	}
 	return m
@@ -63,14 +64,4 @@ func splitPath(path string) []string {
 		}
 	}
 	return list
-}
-
-// mergeInto merges the src map into the tgt map, returning the union.
-// Key collisions are handled by preferring src.
-func mergeInto(tgt, src map[string]interface{}) map[string]interface{} {
-	for k, v := range src {
-		// TODO recursive merge of maps to some reasonable depth
-		tgt[k] = v
-	}
-	return tgt
 }
