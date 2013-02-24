@@ -131,7 +131,7 @@ func TestSplitPath(t *testing.T) {
 	}
 
 	for path, expected := range map[string][]string{
-		"":                 []string{},
+		"":                 []string{}, // special-case
 		"foo":              []string{"foo"},
 		"/foo":             []string{"foo"},
 		"foo/":             []string{"foo"},

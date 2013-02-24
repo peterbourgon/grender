@@ -80,7 +80,7 @@ func targetFor(sourceFilename, ext string) string {
 // mustTemplate returns the contents of the template file specified under the
 // "template" key for the metadata in the stack identified by the given path.
 // In human words, it means "get me the template for this file".
-func mustTemplate(s *Stack, path string) []byte {
+func mustTemplate(s StackReader, path string) []byte {
 	template, ok := s.Get(path)["template"]
 	if !ok {
 		log.Printf("%s: no template", path)
@@ -97,8 +97,14 @@ func mustTemplate(s *Stack, path string) []byte {
 
 // splitPath tokenizes the given path string on filepath.Separator.
 func splitPath(path string) []string {
+	path = filepath.Clean(path)
+	if path == "." {
+		return []string{} // special-case; see TestSplitPath
+	}
+
+	sep := string(filepath.Separator)
 	list := []string{}
-	for _, s := range strings.Split(path, string(filepath.Separator)) {
+	for _, s := range strings.Split(path, sep) {
 		if s := strings.TrimSpace(s); s != "" {
 			list = append(list, s)
 		}
@@ -109,7 +115,7 @@ func splitPath(path string) []string {
 // splatInto splits the `path` on filepath.Separator, and merges the passed
 // `metadata` into the map `m` under the resulting key.
 //
-// If path="foo/bar/baz", splatInto is semantically equivalent to
+// As an example, if path="foo/bar/baz", splatInto is semantically the same as
 // `m = merge(m[foo][bar][baz], metadata)`.
 func splatInto(m map[string]interface{}, path string, metadata map[string]interface{}) {
 	m0 := m

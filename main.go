@@ -18,6 +18,7 @@ var (
 var (
 	sourceDir = flag.String("source", "src", "path to site source (input)")
 	targetDir = flag.String("target", "tgt", "path to site target (output)")
+	globalKey = flag.String("global.key", "files", "template node name for global info")
 )
 
 func init() {
@@ -37,7 +38,7 @@ func main() {
 	m := map[string]interface{}{}
 	s := NewStack()
 	filepath.Walk(*sourceDir, gather(s, m))
-	s.Add("", map[string]interface{}{"files": m}) // "global" key
+	s.Add("", map[string]interface{}{*globalKey: m})
 
 	filepath.Walk(*sourceDir, transform(s))
 }
@@ -53,7 +54,7 @@ func splitMetadata(buf []byte) ([]byte, []byte) {
 	return []byte{}, buf
 }
 
-func gather(s *Stack, m map[string]interface{}) filepath.WalkFunc {
+func gather(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
 			return nil // descend
@@ -102,7 +103,7 @@ func gather(s *Stack, m map[string]interface{}) filepath.WalkFunc {
 	}
 }
 
-func transform(s *Stack) filepath.WalkFunc {
+func transform(s StackReader) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
 			return nil // descend
