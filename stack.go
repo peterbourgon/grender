@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/peterbourgon/mergemap"
 	"path/filepath"
-	"strings"
 )
 
 // Stack stores a set of keyed map[string]interface{} metadata.
@@ -53,15 +52,4 @@ func (s *Stack) Get(path string) map[string]interface{} {
 		}
 	}
 	return m
-}
-
-// splitPath tokenizes the given path string on filepath.Separator.
-func splitPath(path string) []string {
-	list := []string{}
-	for _, s := range strings.Split(path, string(filepath.Separator)) {
-		if s := strings.TrimSpace(s); s != "" {
-			list = append(list, s)
-		}
-	}
-	return list
 }

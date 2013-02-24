@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 var (
@@ -17,13 +16,8 @@ var (
 )
 
 var (
-	sourceDir  = flag.String("source", "src", "path to site source (input)")
-	targetDir  = flag.String("target", "tgt", "path to site target (output)")
-	globalKeys = flag.String("global", "blog", "comma-separated list of global keys")
-)
-
-var (
-	Globals = map[string]struct{}{}
+	sourceDir = flag.String("source", "src", "path to site source (input)")
+	targetDir = flag.String("target", "tgt", "path to site target (output)")
 )
 
 func init() {
@@ -37,15 +31,14 @@ func init() {
 			os.Exit(1)
 		}
 	}
-
-	for _, k := range strings.Split(*globalKeys, ",") {
-		Globals[k] = struct{}{}
-	}
 }
 
 func main() {
+	m := map[string]interface{}{}
 	s := NewStack()
-	filepath.Walk(*sourceDir, gatherGlobals(s))
+	filepath.Walk(*sourceDir, gather(s, m))
+	s.Add("", map[string]interface{}{"files": m}) // "global" key
+
 	filepath.Walk(*sourceDir, transform(s))
 }
 
@@ -60,29 +53,96 @@ func splitMetadata(buf []byte) ([]byte, []byte) {
 	return []byte{}, buf
 }
 
-func gatherGlobals(s *Stack) filepath.WalkFunc {
+func gather(s *Stack, m map[string]interface{}) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
 			return nil // descend
 		}
 		switch filepath.Ext(path) {
 		case ".json":
-			for k, v := range mustJSON(mustRead(path)) {
-				if _, ok := Globals[k]; ok {
-					subMetadata := map[string]interface{}{k: v}
-					s.Add("", subMetadata) // this dir
-				}
+			metadata := mustJSON(mustRead(path))
+			s.Add(filepath.Dir(path), metadata)
+			log.Printf("%s gathered (%d element(s))", path, len(metadata))
+
+		case ".html":
+			fullMetadata := map[string]interface{}{
+				"source": diffPath(*sourceDir, path),
+				"target": diffPath(*targetDir, targetFor(path, filepath.Ext(path))),
+				"url":    "/" + diffPath(*targetDir, targetFor(path, filepath.Ext(path))),
 			}
-		case ".html", ".md":
 			metadataBuf, _ := splitMetadata(mustRead(path))
 			if len(metadataBuf) > 0 {
-				for k, v := range mustJSON(metadataBuf) {
-					if _, ok := Globals[k]; ok {
-						subMetadata := map[string]interface{}{k: v}
-						s.Add("", subMetadata) // this file only
-					}
-				}
+				fileMetadata := mustJSON(metadataBuf)
+				s.Add(path, fileMetadata)
 			}
+			fullMetadata = mergemap.Merge(s.Get(path), fullMetadata)
+			splatInto(m, diffPath(*sourceDir, path), fullMetadata)
+			log.Printf("%s gathered (%d element(s))", path, len(fullMetadata))
+
+		case ".md":
+			fullMetadata := map[string]interface{}{
+				"source": diffPath(*sourceDir, path),
+				"target": diffPath(*targetDir, targetFor(path, ".html")),
+				"url":    "/" + diffPath(*targetDir, targetFor(path, ".html")),
+			}
+			metadataBuf, _ := splitMetadata(mustRead(path))
+			if len(metadataBuf) > 0 {
+				fileMetadata := mustJSON(metadataBuf)
+				s.Add(path, fileMetadata)
+			}
+			fullMetadata = mergemap.Merge(s.Get(path), fullMetadata)
+			splatInto(m, diffPath(*sourceDir, path), fullMetadata)
+			log.Printf("%s gathered (%d element(s))", path, len(fullMetadata))
+
+		default:
+			log.Printf("%s ignored for gathering", path)
+
+		}
+		return nil
+	}
+}
+
+func transform(s *Stack) filepath.WalkFunc {
+	return func(path string, info os.FileInfo, _ error) error {
+		if info.IsDir() {
+			return nil // descend
+		}
+		switch filepath.Ext(path) {
+		case ".json":
+			log.Printf("%s ignored for transformation", path)
+
+		case ".html":
+			_, contentBuf := splitMetadata(mustRead(path))
+			metadata := s.Get(path)
+			outputBuf := renderTemplate(path, contentBuf, metadata)
+			dst := targetFor(path, filepath.Ext(path))
+			mustWrite(dst, outputBuf)
+			log.Printf("%s transformed to %s", path, dst)
+
+		case ".md":
+			_, contentBuf := splitMetadata(mustRead(path))
+
+			// render the markdown, and put it into the 'content' key of an
+			// interstitial metadata, to be fed to the template renderer
+			metadata := mergemap.Merge(s.Get(path), map[string]interface{}{
+				"content": renderMarkdown(contentBuf),
+			})
+
+			// render the complete html output according to the template
+			outputBuf := renderTemplate(path, mustTemplate(s, path), metadata)
+
+			// write
+			dst := targetFor(path, ".html")
+			mustWrite(dst, outputBuf)
+			log.Printf("%s transformed to %s", path, dst)
+
+		case ".source", ".template":
+			log.Printf("%s ignored for transformation", path)
+
+		default:
+			dst := filepath.Join(*targetDir, diffPath(*sourceDir, path))
+			mustCopy(targetFor(path, filepath.Ext(path)), path)
+			log.Printf("%s transformed to %s verbatim", path, dst)
 		}
 		return nil
 	}
@@ -124,57 +184,4 @@ func renderMarkdown(input []byte) []byte {
 	mdOptions = mdOptions | blackfriday.EXTENSION_FENCED_CODE
 
 	return blackfriday.Markdown(input, htmlRenderer, mdOptions)
-}
-
-func transform(s *Stack) filepath.WalkFunc {
-	return func(path string, info os.FileInfo, _ error) error {
-		if info.IsDir() {
-			return nil // descend
-		}
-		switch filepath.Ext(path) {
-		case ".json":
-			s.Add(filepath.Dir(path), mustJSON(mustRead(path)))
-			log.Printf("%s added to stack", path)
-
-		case ".html":
-			metadataBuf, dataBuf := splitMetadata(mustRead(path))
-			if len(metadataBuf) > 0 {
-				s.Add(path, mustJSON(metadataBuf))
-			}
-			outputBuf := renderTemplate(path, dataBuf, s.Get(path))
-			dst := targetFor(path, filepath.Ext(path))
-			mustWrite(dst, outputBuf)
-			log.Printf("%s rendered to %s", path, dst)
-
-		case ".md":
-			// .md may contain front matter
-			metadataBuf, dataBuf := splitMetadata(mustRead(path))
-			if len(metadataBuf) > 0 {
-				s.Add(path, mustJSON(metadataBuf))
-			}
-
-			// render the markdown, and put it into the 'content' key of an
-			// interstitial metadata, to be fed to the template renderer
-			myMetadata := mergemap.Merge(s.Get(path), map[string]interface{}{
-				"content": renderMarkdown(dataBuf),
-			})
-
-			// render the complete html output according to the template
-			outputBuf := renderTemplate(path, mustTemplate(s, path), myMetadata)
-
-			// write
-			dst := targetFor(path, ".html") // force .html extension
-			mustWrite(dst, outputBuf)
-			log.Printf("%s rendered to %s", path, dst)
-
-		case ".source", ".template":
-			log.Printf("%s ignored", path)
-
-		default:
-			dst := filepath.Join(*targetDir, diffPath(*sourceDir, path))
-			mustCopy(targetFor(path, filepath.Ext(path)), path)
-			log.Printf("%s copied to %s verbatim", path, dst)
-		}
-		return nil
-	}
 }
