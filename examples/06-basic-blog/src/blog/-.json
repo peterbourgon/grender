@@ -1,5 +1,5 @@
 {
 	"template": "entry.template", 
 	"entry": true,
-	"title": "I forgot to set a title in this file"
+	"title": "I forgot to set a title in the .md file"
 }
