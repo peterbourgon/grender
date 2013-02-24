@@ -19,10 +19,9 @@ can easily get an up-to-date Grender binary.
 
 ## Background
 
-Grender is designed to power a large class of simple websites, not just blogs.
-(Of course, Grender can power blogs, too.) It was created as a response to the
-perceived complexity of Jekyll, both in terms of configuration and
-implementation.
+Grender is designed to power a large class of simple websites, including but
+not limited to blogs. It was created as a response to the perceived complexity
+of Jekyll, both in terms of configuration and implementation.
 
 
 ## Usage
