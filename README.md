@@ -27,29 +27,27 @@ implementation.
 
 ## Concepts
 
-* **source file**: any file in the **source directory**, specified by the
-  commandline flag `-source` (default `src`). Grender reads and processes
-  source files.
+* **source directory**: specified by the commandline flag `-source` (default 
+  `src`). Contains source files, which grender reads and processes.
 
-* **target file**: any file in the **target directory**, specified by the
-  commandline flag `-target` (default `tgt`). Every target file is rendered or
-  copied from exactly one source file. Not every source file produces a target
-  file.
+* **target directory**: specified by the commandline flag `-target` (default 
+  `tgt`). Every target file is rendered or copied from exactly one source file. 
+  Not every source file produces a target file.
 
 * **metadata**: JSON data, read from certain types of source files, and used to
   render target files. Associated with the source file that produced it.
 
 * **the Stack**: a mapping of source filename to metadata. Provides "get"
   semantics, which composes the correct metadata for a target file. See
-  [Metadata Composition][#Metadata-Composition], below, for more details.
+  [Metadata Composition](#Metadata-Composition), below, for more details.
 
 * **global key**: a key present in every composed metadata, containing the
   specific composed metadata of every renderable source file. Specified by the
   commandline flag `-global.key` (default `files`). See
-  [Global Key][#Global-Key], below, for more details.
+  [Global Key](#Global-Key), below, for more details.
 
 * **template**: .md and .html files may contain template directives. Grender
-  uses Go's [html/template][http://golang.org/pkg/html/template] engine. It's
+  uses Go's [html/template](http://golang.org/pkg/html/template) engine. It's
   easy; see the examples directory for some use-cases.
 
 
