@@ -40,9 +40,9 @@ func init() {
 func main() {
 	m := map[string]interface{}{}
 	s := NewStack()
-	filepath.Walk(*sourceDir, gather(s, m))
+	filepath.Walk(*sourceDir, gatherJSON(s))
+	filepath.Walk(*sourceDir, gatherSource(s, m))
 	s.Add("", map[string]interface{}{*globalKey: m})
-
 	filepath.Walk(*sourceDir, transform(s))
 }
 
@@ -57,7 +57,7 @@ func splitMetadata(buf []byte) ([]byte, []byte) {
 	return []byte{}, buf
 }
 
-func gather(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc {
+func gatherJSON(s StackReadWriter) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
 			return nil // descend
@@ -67,7 +67,17 @@ func gather(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc {
 			metadata := mustJSON(mustRead(path))
 			s.Add(filepath.Dir(path), metadata)
 			Infof("%s gathered (%d element(s))", path, len(metadata))
+		}
+		return nil
+	}
+}
 
+func gatherSource(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc {
+	return func(path string, info os.FileInfo, _ error) error {
+		if info.IsDir() {
+			return nil // descend
+		}
+		switch filepath.Ext(path) {
 		case ".html":
 			fullMetadata := map[string]interface{}{
 				"source":  diffPath(*sourceDir, path),
@@ -99,10 +109,6 @@ func gather(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc {
 			fullMetadata = mergemap.Merge(fullMetadata, s.Get(path))
 			splatInto(m, diffPath(*sourceDir, path), fullMetadata)
 			Infof("%s gathered (%d element(s))", path, len(fullMetadata))
-
-		default:
-			Infof("%s ignored for gathering", path)
-
 		}
 		return nil
 	}
@@ -118,14 +124,20 @@ func transform(s StackReader) filepath.WalkFunc {
 			Infof("%s ignored for transformation", path)
 
 		case ".html":
+			// read
 			_, contentBuf := splitMetadata(mustRead(path))
+
+			// render
 			metadata := s.Get(path)
 			outputBuf := renderTemplate(path, contentBuf, metadata)
+
+			// write
 			dst := targetFor(path, filepath.Ext(path))
 			mustWrite(dst, outputBuf)
 			Infof("%s transformed to %s", path, dst)
 
 		case ".md":
+			// read
 			_, contentBuf := splitMetadata(mustRead(path))
 
 			// render the markdown, and put it into the 'content' key of an
