@@ -180,7 +180,7 @@ func renderTemplate(path string, input []byte, metadata map[string]interface{}) 
 			filename = filepath.Join(filepath.Dir(path), filename)
 			return template.HTML(mustRead(filename))
 		},
-		"sortkey": sortedValues,
+		"sorted": sortedValues,
 	}
 	templateName := diffPath(*sourceDir, path)
 	tmpl, err := template.New(templateName).Funcs(funcMap).Parse(string(input))
