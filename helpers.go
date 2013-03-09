@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/peterbourgon/mergemap"
 	"io/ioutil"
 	"os"
@@ -14,7 +15,7 @@ import (
 func mustRead(filename string) []byte {
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
-		Fatalf("%s: %s", filename, err)
+		Fatalf("must read: %s: %s", filename, err)
 	}
 	return buf
 }
@@ -23,7 +24,7 @@ func mustRead(filename string) []byte {
 func mustWrite(tgt string, buf []byte) {
 	os.MkdirAll(filepath.Dir(tgt), 0777)
 	if err := ioutil.WriteFile(tgt, buf, 0755); err != nil {
-		Fatalf("%s: %s", tgt, err)
+		Fatalf("must write: %s: %s", tgt, err)
 	}
 }
 
@@ -59,7 +60,7 @@ func mustCopy(dst, src string) {
 func mustJSON(buf []byte) map[string]interface{} {
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(buf, &m); err != nil {
-		Fatalf("%s", err)
+		Fatalf("must JSON: %s", err)
 	}
 	return m
 }
@@ -72,20 +73,29 @@ func targetFor(sourceFilename, ext string) string {
 	return dst[:n] + ext
 }
 
-// mustTemplate returns the contents of the template file specified under the
+// maybeTemplate returns the contents of the template file specified under the
 // "template" key for the metadata in the stack identified by the given path.
 // In human words, it means "get me the template for this file".
-func mustTemplate(s StackReader, path string) []byte {
+func maybeTemplate(s StackReader, path string) ([]byte, error) {
 	template, ok := s.Get(path)["template"]
 	if !ok {
-		Fatalf("%s: no template", path)
+		return []byte{}, fmt.Errorf("%s: no template", path)
 	}
 	templateStr, ok := template.(string)
 	if !ok {
-		Fatalf("%s: bad type for template key", path)
+		return []byte{}, fmt.Errorf("%s: bad type for template key", path)
 	}
-	templateFile := filepath.Join(filepath.Dir(path), templateStr)
-	return mustRead(templateFile)
+	templateFile := filepath.Join(*sourceDir, templateStr)
+	return mustRead(templateFile), nil
+}
+
+// mustTemplate calls maybeTemplate, and fatals on error.
+func mustTemplate(s StackReader, path string) []byte {
+	buf, err := maybeTemplate(s, path)
+	if err != nil {
+		Fatalf("must template: %s", err)
+	}
+	return buf
 }
 
 // splitPath tokenizes the given path string on filepath.Separator.

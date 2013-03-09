@@ -58,6 +58,7 @@ func splitMetadata(buf []byte) ([]byte, []byte) {
 }
 
 func gatherJSON(s StackReadWriter) filepath.WalkFunc {
+	Debugf("gathering JSON")
 	return func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
 			return nil // descend
@@ -73,6 +74,7 @@ func gatherJSON(s StackReadWriter) filepath.WalkFunc {
 }
 
 func gatherSource(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc {
+	Debugf("gathering source")
 	return func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
 			return nil // descend
@@ -115,10 +117,14 @@ func gatherSource(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc
 }
 
 func transform(s StackReader) filepath.WalkFunc {
+	Debugf("transforming")
 	return func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
+			Debugf("descending into %s", path)
 			return nil // descend
 		}
+
+		Debugf("processing %s", path)
 		switch filepath.Ext(path) {
 		case ".json":
 			Infof("%s ignored for transformation", path)
@@ -128,8 +134,15 @@ func transform(s StackReader) filepath.WalkFunc {
 			_, contentBuf := splitMetadata(mustRead(path))
 
 			// render
-			metadata := s.Get(path)
-			outputBuf := renderTemplate(path, contentBuf, metadata)
+			metadata := mergemap.Merge(s.Get(path), map[string]interface{}{
+				"content": template.HTML(contentBuf),
+			})
+			var outputBuf []byte
+			if templateBuf, err := maybeTemplate(s, path); err == nil {
+				outputBuf = renderTemplate(path, templateBuf, metadata)
+			} else {
+				outputBuf = renderTemplate(path, contentBuf, metadata)
+			}
 
 			// write
 			dst := targetFor(path, filepath.Ext(path))
@@ -140,14 +153,12 @@ func transform(s StackReader) filepath.WalkFunc {
 			// read
 			_, contentBuf := splitMetadata(mustRead(path))
 
-			// render the markdown, and put it into the 'content' key of an
-			// interstitial metadata, to be fed to the template renderer
+			// render
 			metadata := mergemap.Merge(s.Get(path), map[string]interface{}{
 				"content": template.HTML(renderMarkdown(contentBuf)),
 			})
-
-			// render the complete html output according to the template
-			outputBuf := renderTemplate(path, mustTemplate(s, path), metadata)
+			template := mustTemplate(s, path)
+			outputBuf := renderTemplate(path, template, metadata)
 
 			// write
 			dst := targetFor(path, ".html")
@@ -167,34 +178,45 @@ func transform(s StackReader) filepath.WalkFunc {
 }
 
 func renderTemplate(path string, input []byte, metadata map[string]interface{}) []byte {
+	Debugf("rendering template (%s) with %d byte(s) of input", path, len(input))
 	funcMap := template.FuncMap{
 		"importcss": func(filename string) template.CSS {
-			filename = filepath.Join(filepath.Dir(path), filename)
+			Debugf("importcss: importing %s from %s", filename, path)
+			filename = filepath.Join(*sourceDir, filename)
+			Debugf("importcss: looking for %s", filename)
 			return template.CSS(mustRead(filename))
 		},
 		"importjs": func(filename string) template.JS {
-			filename = filepath.Join(filepath.Dir(path), filename)
+			Debugf("importjs: importing %s from %s", filename, path)
+			filename = filepath.Join(*sourceDir, filename)
+			Debugf("importjs: looking for %s", filename)
 			return template.JS(mustRead(filename))
 		},
 		"importhtml": func(filename string) template.HTML {
-			filename = filepath.Join(filepath.Dir(path), filename)
+			Debugf("importhtml: importing %s from %s", filename, path)
+			filename = filepath.Join(*sourceDir, filename)
+			Debugf("importhtml: looking for %s", filename)
 			return template.HTML(mustRead(filename))
 		},
 		"sorted": sortedValues,
 	}
+
 	templateName := diffPath(*sourceDir, path)
 	tmpl, err := template.New(templateName).Funcs(funcMap).Parse(string(input))
 	if err != nil {
-		Fatalf("%s", err)
+		Fatalf("render template: parsing: %s", err)
 	}
+
 	output := bytes.Buffer{}
 	if err := tmpl.Execute(&output, metadata); err != nil {
-		Fatalf("%s", err)
+		Fatalf("render template: executing: %s", err)
 	}
+
 	return output.Bytes()
 }
 
 func renderMarkdown(input []byte) []byte {
+	Debugf("rendering %d byte(s) of Markdown", len(input))
 	htmlOptions := 0
 	htmlOptions = htmlOptions | blackfriday.HTML_GITHUB_BLOCKCODE
 	htmlOptions = htmlOptions | blackfriday.HTML_USE_SMARTYPANTS
