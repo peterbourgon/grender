@@ -17,9 +17,7 @@ func Debugf(format string, args ...interface{}) {
 }
 
 func Infof(format string, args ...interface{}) {
-	if *verbose {
-		log.Printf(format, args...)
-	}
+	log.Printf(format, args...)
 }
 
 func Warningf(format string, args ...interface{}) {

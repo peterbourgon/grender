@@ -16,7 +16,6 @@ var (
 
 var (
 	debug     = flag.Bool("debug", false, "print debug information (implies verbose)")
-	verbose   = flag.Bool("verbose", false, "print verbose information")
 	sourceDir = flag.String("source", "src", "path to site source (input)")
 	targetDir = flag.String("target", "tgt", "path to site target (output)")
 	globalKey = flag.String("global.key", "files", "template node name for per-file metadata")
@@ -24,10 +23,6 @@ var (
 
 func init() {
 	flag.Parse()
-
-	if *debug {
-		*verbose = true
-	}
 
 	var err error
 	for _, s := range []*string{sourceDir, targetDir} {
@@ -65,7 +60,7 @@ func gatherJSON(s StackReadWriter) filepath.WalkFunc {
 		}
 		switch filepath.Ext(path) {
 		case ".json":
-			metadata := mustJSON(mustRead(path))
+			metadata := ParseJSON(Read(path))
 			s.Add(filepath.Dir(path), metadata)
 			Infof("%s gathered (%d element(s))", path, len(metadata))
 		}
@@ -82,34 +77,34 @@ func gatherSource(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc
 		switch filepath.Ext(path) {
 		case ".html":
 			fullMetadata := map[string]interface{}{
-				"source":  diffPath(*sourceDir, path),
-				"target":  diffPath(*targetDir, targetFor(path, filepath.Ext(path))),
-				"url":     "/" + diffPath(*targetDir, targetFor(path, filepath.Ext(path))),
+				"source":  Relative(*sourceDir, path),
+				"target":  Relative(*targetDir, TargetFor(path, filepath.Ext(path))),
+				"url":     "/" + Relative(*targetDir, TargetFor(path, filepath.Ext(path))),
 				"sortkey": filepath.Base(path),
 			}
-			metadataBuf, _ := splitMetadata(mustRead(path))
+			metadataBuf, _ := splitMetadata(Read(path))
 			if len(metadataBuf) > 0 {
-				fileMetadata := mustJSON(metadataBuf)
+				fileMetadata := ParseJSON(metadataBuf)
 				s.Add(path, fileMetadata)
 			}
 			fullMetadata = mergemap.Merge(fullMetadata, s.Get(path))
-			splatInto(m, diffPath(*sourceDir, path), fullMetadata)
+			SplatInto(m, Relative(*sourceDir, path), fullMetadata)
 			Infof("%s gathered (%d element(s))", path, len(fullMetadata))
 
 		case ".md":
 			fullMetadata := map[string]interface{}{
-				"source":  diffPath(*sourceDir, path),
-				"target":  diffPath(*targetDir, targetFor(path, ".html")),
-				"url":     "/" + diffPath(*targetDir, targetFor(path, ".html")),
+				"source":  Relative(*sourceDir, path),
+				"target":  Relative(*targetDir, TargetFor(path, ".html")),
+				"url":     "/" + Relative(*targetDir, TargetFor(path, ".html")),
 				"sortkey": filepath.Base(path),
 			}
-			metadataBuf, _ := splitMetadata(mustRead(path))
+			metadataBuf, _ := splitMetadata(Read(path))
 			if len(metadataBuf) > 0 {
-				fileMetadata := mustJSON(metadataBuf)
+				fileMetadata := ParseJSON(metadataBuf)
 				s.Add(path, fileMetadata)
 			}
 			fullMetadata = mergemap.Merge(fullMetadata, s.Get(path))
-			splatInto(m, diffPath(*sourceDir, path), fullMetadata)
+			SplatInto(m, Relative(*sourceDir, path), fullMetadata)
 			Infof("%s gathered (%d element(s))", path, len(fullMetadata))
 		}
 		return nil
@@ -131,46 +126,46 @@ func transform(s StackReader) filepath.WalkFunc {
 
 		case ".html":
 			// read
-			_, contentBuf := splitMetadata(mustRead(path))
+			_, contentBuf := splitMetadata(Read(path))
 
 			// render
 			metadata := mergemap.Merge(s.Get(path), map[string]interface{}{
 				"content": template.HTML(contentBuf),
 			})
 			var outputBuf []byte
-			if templateBuf, err := maybeTemplate(s, path); err == nil {
+			if templateBuf, err := MaybeTemplate(s, path); err == nil {
 				outputBuf = renderTemplate(path, templateBuf, metadata)
 			} else {
 				outputBuf = renderTemplate(path, contentBuf, metadata)
 			}
 
 			// write
-			dst := targetFor(path, filepath.Ext(path))
-			mustWrite(dst, outputBuf)
+			dst := TargetFor(path, filepath.Ext(path))
+			Write(dst, outputBuf)
 			Infof("%s transformed to %s", path, dst)
 
 		case ".md":
 			// read
-			_, contentBuf := splitMetadata(mustRead(path))
+			_, contentBuf := splitMetadata(Read(path))
 
 			// render
 			metadata := mergemap.Merge(s.Get(path), map[string]interface{}{
 				"content": template.HTML(renderMarkdown(contentBuf)),
 			})
-			template := mustTemplate(s, path)
+			template := Template(s, path)
 			outputBuf := renderTemplate(path, template, metadata)
 
 			// write
-			dst := targetFor(path, ".html")
-			mustWrite(dst, outputBuf)
+			dst := TargetFor(path, ".html")
+			Write(dst, outputBuf)
 			Infof("%s transformed to %s", path, dst)
 
 		case ".source", ".template":
 			Infof("%s ignored for transformation", path)
 
 		default:
-			dst := targetFor(path, filepath.Ext(path))
-			mustCopy(dst, path)
+			dst := TargetFor(path, filepath.Ext(path))
+			Copy(dst, path)
 			Infof("%s transformed to %s verbatim", path, dst)
 		}
 		return nil
@@ -184,24 +179,24 @@ func renderTemplate(path string, input []byte, metadata map[string]interface{}) 
 			Debugf("importcss: importing %s from %s", filename, path)
 			filename = filepath.Join(*sourceDir, filename)
 			Debugf("importcss: looking for %s", filename)
-			return template.CSS(mustRead(filename))
+			return template.CSS(Read(filename))
 		},
 		"importjs": func(filename string) template.JS {
 			Debugf("importjs: importing %s from %s", filename, path)
 			filename = filepath.Join(*sourceDir, filename)
 			Debugf("importjs: looking for %s", filename)
-			return template.JS(mustRead(filename))
+			return template.JS(Read(filename))
 		},
 		"importhtml": func(filename string) template.HTML {
 			Debugf("importhtml: importing %s from %s", filename, path)
 			filename = filepath.Join(*sourceDir, filename)
 			Debugf("importhtml: looking for %s", filename)
-			return template.HTML(mustRead(filename))
+			return template.HTML(Read(filename))
 		},
-		"sorted": sortedValues,
+		"sorted": SortedValues,
 	}
 
-	templateName := diffPath(*sourceDir, path)
+	templateName := Relative(*sourceDir, path)
 	tmpl, err := template.New(templateName).Funcs(funcMap).Parse(string(input))
 	if err != nil {
 		Fatalf("render template: parsing: %s", err)

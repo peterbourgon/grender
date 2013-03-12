@@ -42,7 +42,7 @@ func NewStack() *Stack {
 // Add merges the given metadata into the Stack element represented by path.
 // If no such element exists, Add will create it.
 func (s *Stack) Add(path string, m map[string]interface{}) {
-	key := filepath.Join(splitPath(path)...)
+	key := filepath.Join(SplitPath(path)...)
 
 	existing, ok := s.m[key]
 	if !ok {
@@ -54,7 +54,7 @@ func (s *Stack) Add(path string, m map[string]interface{}) {
 
 // Get returns the aggregate metadata visible from the given path.
 func (s *Stack) Get(path string) map[string]interface{} {
-	list := splitPath(path)
+	list := SplitPath(path)
 	if len(list) <= 0 {
 		return map[string]interface{}{}
 	}

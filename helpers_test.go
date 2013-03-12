@@ -19,8 +19,8 @@ func TestDiffPath(t *testing.T) {
 		tuple{"/foo/src//", "/foo/src/a/b.json"}:  "a/b.json",
 		tuple{"/foo/src///", "/foo/src/a/b.json"}: "a/b.json",
 	} {
-		if got := diffPath(tu.base, tu.complete); expected != got {
-			t.Errorf("diffPath(%s, %s): expected %s, got %s", tu.base, tu.complete, expected, got)
+		if got := Relative(tu.base, tu.complete); expected != got {
+			t.Errorf("Relative(%s, %s): expected %s, got %s", tu.base, tu.complete, expected, got)
 		}
 	}
 }
@@ -40,7 +40,7 @@ func TestMustCopy(t *testing.T) {
 	}
 
 	dst := src.Name() + ".copy"
-	mustCopy(dst, src.Name())
+	Copy(dst, src.Name())
 
 	dstBuf, err := ioutil.ReadFile(dst)
 	if err != nil {
@@ -69,7 +69,7 @@ func TestMustJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m := mustJSON(mustRead(tmpFile.Name()))
+	m := ParseJSON(Read(tmpFile.Name()))
 	a, ok := m["a"]
 	if !ok {
 		t.Fatal("'a' not present")
@@ -106,7 +106,7 @@ func TestTargetFor(t *testing.T) {
 		tuple{"/a/b/c.php", ".html"}: *targetDir + "/a/b/c.html",
 	} {
 		path, ext := *sourceDir+src.relativePath, src.ext
-		got := targetFor(path, ext)
+		got := TargetFor(path, ext)
 		if expected != got {
 			t.Errorf("%s: expected '%s', got '%s'", path, expected, got)
 		}
@@ -138,7 +138,7 @@ func TestSplitPath(t *testing.T) {
 		"a/b/c.d":          []string{"a", "b", "c.d"},
 		"/foo/bar/baz.txt": []string{"foo", "bar", "baz.txt"},
 	} {
-		assert(splitPath(path), expected)
+		assert(SplitPath(path), expected)
 	}
 }
 
@@ -154,18 +154,18 @@ func TestSplatInto(t *testing.T) {
 		}
 	}
 
-	splatInto(m, "foo", map[string]interface{}{"a": 1, "b": 2})
+	SplatInto(m, "foo", map[string]interface{}{"a": 1, "b": 2})
 	assert(`{"foo":{"a":1,"b":2}}`)
 
-	splatInto(m, "bar/baz", map[string]interface{}{"x": map[string]string{"y": "z"}})
+	SplatInto(m, "bar/baz", map[string]interface{}{"x": map[string]string{"y": "z"}})
 	assert(`{"bar":{"baz":{"x":{"y":"z"}}},"foo":{"a":1,"b":2}}`)
 
-	splatInto(m, "bar/baz", map[string]interface{}{"x": map[string]string{"y": "!"}})
+	SplatInto(m, "bar/baz", map[string]interface{}{"x": map[string]string{"y": "!"}})
 	assert(`{"bar":{"baz":{"x":{"y":"!"}}},"foo":{"a":1,"b":2}}`)
 
-	splatInto(m, "bar/baz", map[string]interface{}{"x": map[string]string{"yy": "!!"}})
+	SplatInto(m, "bar/baz", map[string]interface{}{"x": map[string]string{"yy": "!!"}})
 	assert(`{"bar":{"baz":{"x":{"y":"!","yy":"!!"}}},"foo":{"a":1,"b":2}}`)
 
-	splatInto(m, "foo", map[string]interface{}{"a": "x"})
+	SplatInto(m, "foo", map[string]interface{}{"a": "x"})
 	assert(`{"bar":{"baz":{"x":{"y":"!","yy":"!!"}}},"foo":{"a":"x","b":2}}`)
 }
