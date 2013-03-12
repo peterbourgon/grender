@@ -69,26 +69,26 @@ func TargetFor(sourceFilename, ext string) string {
 // MaybeTemplate returns the contents of the template file specified under the
 // "template" key for the metadata in the stack identified by the given path.
 // In human words, it means "get me the template for this file".
-func MaybeTemplate(s StackReader, path string) ([]byte, error) {
-	template, ok := s.Get(path)["template"]
+func MaybeTemplate(s StackReader, path string) (string, []byte, error) {
+	templateInterface, ok := s.Get(path)["template"]
 	if !ok {
-		return []byte{}, fmt.Errorf("%s: no template", path)
+		return "", []byte{}, fmt.Errorf("%s: no template", path)
 	}
-	templateStr, ok := template.(string)
+	templateStr, ok := templateInterface.(string)
 	if !ok {
-		return []byte{}, fmt.Errorf("%s: bad type for template key", path)
+		return "", []byte{}, fmt.Errorf("%s: bad type for template key", path)
 	}
-	templateFile := filepath.Join(*sourceDir, templateStr)
-	return Read(templateFile), nil
+	templateFilename := filepath.Join(filepath.Dir(path), templateStr) // rel
+	return templateFilename, Read(templateFilename), nil
 }
 
 // Template calls MaybeTemplate, and fatals on error.
-func Template(s StackReader, path string) []byte {
-	buf, err := MaybeTemplate(s, path)
+func Template(s StackReader, path string) (string, []byte) {
+	path, buf, err := MaybeTemplate(s, path)
 	if err != nil {
 		Fatalf("must template: %s", err)
 	}
-	return buf
+	return path, buf
 }
 
 // SplitPath tokenizes the given path string on filepath.Separator.
