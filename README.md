@@ -120,6 +120,6 @@ In your template, you can do:
 (`url` is a special key that grender autopopulates in the Global Key space for
 every rendered file.) See [the example][06].
 
-[06]: http://github.com/peterbourgon/grener/blob/grender-2/examples/06-basic-blog
+[06]: http://github.com/peterbourgon/grender/blob/grender-2/examples/06-basic-blog
 
 
