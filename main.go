@@ -15,7 +15,7 @@ var (
 )
 
 var (
-	debug     = flag.Bool("debug", false, "print debug information (implies verbose)")
+	debug     = flag.Bool("debug", false, "print debug information")
 	sourceDir = flag.String("source", "src", "path to site source (input)")
 	targetDir = flag.String("target", "tgt", "path to site target (output)")
 	globalKey = flag.String("global.key", "files", "template node name for per-file metadata")
