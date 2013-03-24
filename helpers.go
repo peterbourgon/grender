@@ -261,7 +261,11 @@ func PrettyPrint(i interface{}) string {
 
 // SortedValues returns a slice of every value in the passed map, ordered by
 // the "sortkey" (if it exists) or the name of the entry (if it doesn't).
-func SortedValues(m map[string]interface{}) []interface{} {
+func SortedValues(i interface{}) []interface{} {
+	m, ok := i.(map[string]interface{})
+	if !ok {
+		Fatalf("SortedValues: expected map[string]interface{}, didn't get it")
+	}
 	mapping := map[string]string{} // sort key: original key
 	for name, element := range m {
 		submap, ok := element.(map[string]interface{})
