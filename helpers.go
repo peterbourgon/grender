@@ -7,7 +7,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -53,7 +55,7 @@ func Copy(dst, src string) {
 func ParseJSON(buf []byte) map[string]interface{} {
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(buf, &m); err != nil {
-		Fatalf("must JSON: %s", err)
+		Fatalf("parse JSON: %s", err)
 	}
 	return m
 }
@@ -106,6 +108,73 @@ func SplitPath(path string) []string {
 		}
 	}
 	return list
+}
+
+var (
+	BlogEntryRegexp = regexp.MustCompile(`^([0-9]+)-([0-9]+)-([0-9]+)-(.*)\.[^\.]*$`)
+)
+
+func DefaultTitle(path string) string {
+	path = filepath.Base(path)
+	m := BlogEntryRegexp.FindAllStringSubmatch(path, -1)
+	if len(m) <= 0 {
+		Debugf("Default Title: %s: failed to parse stage 0", path)
+		return ""
+	}
+	if len(m[0]) <= 0 {
+		Debugf("Default Title: %s: failed to parse stage 1", path)
+		return ""
+	}
+	if len(m[0][4]) <= 0 {
+		Debugf("Default Title: %s: failed to parse stage 2", path)
+		return ""
+	}
+
+	title := m[0][4]
+	title = strings.Replace(title, "-", " ", -1)
+	title = strings.Replace(title, "_", " ", -1)
+	title = strings.ToTitle(string(title[0])) + title[1:]
+	Debugf("Default Title: %s: %s", path, title)
+	return title
+}
+
+func DefaultDate(path string) string {
+	path = filepath.Base(path)
+	m := BlogEntryRegexp.FindAllStringSubmatch(path, -1)
+	if len(m) <= 0 {
+		Debugf("Default Date: %s: failed to parse stage 0", path)
+		return ""
+	}
+	if len(m[0]) < 5 {
+		Debugf("Default Date: %s: failed to parse stage 1", path)
+		return ""
+	}
+	if len(m[0][1]) <= 0 || len(m[0][2]) <= 0 || len(m[0][3]) <= 0 {
+		Debugf("Default Date: %s: failed to parse stage 2", path)
+		return ""
+	}
+
+	yyyy, err := strconv.ParseInt(m[0][1], 10, 32)
+	if err != nil {
+		Debugf("Default Date: %s: bad year '%s'", path, m[1])
+		return ""
+	}
+
+	mm, err := strconv.ParseInt(m[0][2], 10, 32)
+	if err != nil {
+		Debugf("Default Date: %s: bad month '%s'", path, m[2])
+		return ""
+	}
+
+	dd, err := strconv.ParseInt(m[0][3], 10, 32)
+	if err != nil {
+		Debugf("Default Date: %s: bad day '%s'", path, m[3])
+		return ""
+	}
+
+	date := fmt.Sprintf("%d %02d %02d", yyyy, mm, dd)
+	Debugf("Default Date: %s: %s", path, date)
+	return date
 }
 
 // SplatInto splits the `path` on filepath.Separator, and merges the passed

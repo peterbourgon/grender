@@ -76,36 +76,42 @@ func GatherSource(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc
 		}
 		switch filepath.Ext(path) {
 		case ".html":
-			fullMetadata := map[string]interface{}{
+			defaultMetadata := map[string]interface{}{
 				"source":  Relative(*sourceDir, path),
 				"target":  Relative(*targetDir, TargetFor(path, filepath.Ext(path))),
 				"url":     "/" + Relative(*targetDir, TargetFor(path, filepath.Ext(path))),
 				"sortkey": filepath.Base(path),
 			}
-			metadataBuf, _ := splitMetadata(Read(path))
-			if len(metadataBuf) > 0 {
-				fileMetadata := ParseJSON(metadataBuf)
-				s.Add(path, fileMetadata)
+			fileMetadata := map[string]interface{}{}
+			fileMetadataBuf, _ := splitMetadata(Read(path))
+			if len(fileMetadataBuf) > 0 {
+				fileMetadata = ParseJSON(fileMetadataBuf)
 			}
-			fullMetadata = mergemap.Merge(fullMetadata, s.Get(path))
-			SplatInto(m, Relative(*sourceDir, path), fullMetadata)
-			Debugf("%s gathered (%d element(s))", path, len(fullMetadata))
+			inheritedMetadata := s.Get(path)
+			metadata := mergemap.Merge(defaultMetadata, mergemap.Merge(inheritedMetadata, fileMetadata))
+			s.Add(path, metadata)
+			SplatInto(m, Relative(*sourceDir, path), metadata)
+			Debugf("%s gathered (%d element(s))", path, len(metadata))
 
 		case ".md":
-			fullMetadata := map[string]interface{}{
+			defaultMetadata := map[string]interface{}{
 				"source":  Relative(*sourceDir, path),
 				"target":  Relative(*targetDir, TargetFor(path, ".html")),
 				"url":     "/" + Relative(*targetDir, TargetFor(path, ".html")),
 				"sortkey": filepath.Base(path),
+				"title":   DefaultTitle(path),
+				"date":    DefaultDate(path),
 			}
-			metadataBuf, _ := splitMetadata(Read(path))
-			if len(metadataBuf) > 0 {
-				fileMetadata := ParseJSON(metadataBuf)
-				s.Add(path, fileMetadata)
+			fileMetadata := map[string]interface{}{}
+			fileMetadataBuf, _ := splitMetadata(Read(path))
+			if len(fileMetadataBuf) > 0 {
+				fileMetadata = ParseJSON(fileMetadataBuf)
 			}
-			fullMetadata = mergemap.Merge(fullMetadata, s.Get(path))
-			SplatInto(m, Relative(*sourceDir, path), fullMetadata)
-			Debugf("%s gathered (%d element(s))", path, len(fullMetadata))
+			inheritedMetadata := s.Get(path)
+			metadata := mergemap.Merge(defaultMetadata, mergemap.Merge(inheritedMetadata, fileMetadata))
+			s.Add(path, metadata)
+			SplatInto(m, Relative(*sourceDir, path), metadata)
+			Debugf("%s gathered (%d element(s))", path, len(metadata))
 		}
 		return nil
 	}
