@@ -77,9 +77,9 @@ func GatherSource(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc
 		switch filepath.Ext(path) {
 		case ".html":
 			defaultMetadata := map[string]interface{}{
-				"source":  Relative(*sourceDir, path),
-				"target":  Relative(*targetDir, TargetFor(path, filepath.Ext(path))),
-				"url":     "/" + Relative(*targetDir, TargetFor(path, filepath.Ext(path))),
+				"source":  path,
+				"target":  TargetFileFor(path, filepath.Ext(path)),
+				"url":     "/" + Relative(*targetDir, TargetFileFor(path, filepath.Ext(path))),
 				"sortkey": filepath.Base(path),
 			}
 			fileMetadata := map[string]interface{}{}
@@ -95,18 +95,18 @@ func GatherSource(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc
 
 		case ".md":
 			defaultMetadata := map[string]interface{}{
-				"source":  Relative(*sourceDir, path),
-				"target":  Relative(*targetDir, TargetFor(path, ".html")),
-				"url":     "/" + Relative(*targetDir, TargetFor(path, ".html")),
+				"source":  path,
+				"target":  TargetFileFor(path, ".html"),
+				"url":     "/" + Relative(*targetDir, TargetFileFor(path, ".html")),
 				"sortkey": filepath.Base(path),
 			}
 			if blogTuple, ok := NewBlogTuple(path, ".html"); ok {
-				Debugf("'%s' -> BlogTuple: %s", path, blogTuple.TargetFile(*targetDir))
+				baseDir := filepath.Join(*targetDir, Relative(*sourceDir, filepath.Dir(path)))
 				defaultMetadata["title"] = blogTuple.Title
 				defaultMetadata["date"] = blogTuple.DateString()
-				defaultMetadata["target"] = blogTuple.TargetFile(*targetDir)
-				defaultMetadata["url"] = "/" + Relative(*targetDir, blogTuple.TargetFile(*targetDir))
-				defaultMetadata["redirects"] = blogTuple.Redirects(*targetDir)
+				defaultMetadata["target"] = blogTuple.TargetFileFor(baseDir)
+				defaultMetadata["url"] = "/" + Relative(*targetDir, blogTuple.TargetFileFor(baseDir))
+				defaultMetadata["redirects"] = blogTuple.RedirectFromURLs(baseDir)
 			}
 			fileMetadata := map[string]interface{}{}
 			fileMetadataBuf, _ := splitMetadata(Read(path))
@@ -131,7 +131,7 @@ func Transform(s StackReader) filepath.WalkFunc {
 			return nil // descend
 		}
 
-		Debugf("processing %s", path)
+		Debugf("Transforming %s", path)
 		switch filepath.Ext(path) {
 		case ".json":
 			Debugf("%s ignored for transformation", path)
@@ -144,7 +144,7 @@ func Transform(s StackReader) filepath.WalkFunc {
 			outputBuf := RenderTemplate(path, contentBuf, s.Get(path))
 
 			// write
-			dst := TargetFor(path, filepath.Ext(path))
+			dst := TargetFileFor(path, filepath.Ext(path))
 			Write(dst, outputBuf)
 			Debugf("%s transformed to %s", path, dst)
 
@@ -165,10 +165,11 @@ func Transform(s StackReader) filepath.WalkFunc {
 
 			// write redirects
 			if redirectsInterface, ok := metadata["redirects"]; ok {
-				url, _ := metadata["url"].(string)
-				redirects, _ := redirectsInterface.([]string)
-				for _, redirect := range redirects {
-					Write(redirect, RedirectTo(url))
+				redirectToUrl, _ := metadata["url"].(string)
+				redirectFromUrls, _ := redirectsInterface.([]string)
+				for _, redirectFromUrl := range redirectFromUrls {
+					redirectFromFile := filepath.Join(*targetDir, redirectFromUrl)
+					Write(redirectFromFile, RedirectTo(redirectToUrl))
 				}
 			}
 
@@ -179,7 +180,7 @@ func Transform(s StackReader) filepath.WalkFunc {
 			Debugf("%s ignored for transformation", path)
 
 		default:
-			dst := TargetFor(path, filepath.Ext(path))
+			dst := TargetFileFor(path, filepath.Ext(path))
 			Copy(dst, path)
 			Debugf("%s transformed to %s verbatim", path, dst)
 		}

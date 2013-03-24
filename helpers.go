@@ -60,8 +60,8 @@ func ParseJSON(buf []byte) map[string]interface{} {
 	return m
 }
 
-// TargetFor returns the target filename for the given source filename.
-func TargetFor(sourceFilename, targetExt string) string {
+// TargetFileFor returns the target filename for the given source filename.
+func TargetFileFor(sourceFilename, targetExt string) string {
 	relativePath := Relative(*sourceDir, sourceFilename)
 	dst := filepath.Clean(filepath.Join(*targetDir, relativePath))
 	n := len(dst) - len(filepath.Ext(dst))
@@ -132,35 +132,35 @@ func NewBlogTuple(path, targetExt string) (BlogTuple, bool) {
 	}
 
 	if len(m[0]) < 5 {
-		Debugf("Default Date: %s: failed to parse stage 1", path)
+		Debugf("Blog Tuple: %s: failed to parse stage 1", path)
 		return BlogTuple{}, false
 	}
 
 	if len(m[0][1]) <= 0 || len(m[0][2]) <= 0 || len(m[0][3]) <= 0 {
-		Debugf("Default Date: %s: failed to parse stage 2", path)
+		Debugf("Blog Tuple: %s: failed to parse stage 2", path)
 		return BlogTuple{}, false
 	}
 
 	yyyy, err := strconv.ParseInt(m[0][1], 10, 32)
 	if err != nil {
-		Debugf("Default Date: %s: bad year '%s'", path, m[1])
+		Debugf("Blog Tuple: %s: bad year '%s'", path, m[1])
 		return BlogTuple{}, false
 	}
 
 	mm, err := strconv.ParseInt(m[0][2], 10, 32)
 	if err != nil {
-		Debugf("Default Date: %s: bad month '%s'", path, m[2])
+		Debugf("Blog Tuple: %s: bad month '%s'", path, m[2])
 		return BlogTuple{}, false
 	}
 
 	dd, err := strconv.ParseInt(m[0][3], 10, 32)
 	if err != nil {
-		Debugf("Default Date: %s: bad day '%s'", path, m[3])
+		Debugf("Blog Tuple: %s: bad day '%s'", path, m[3])
 		return BlogTuple{}, false
 	}
 
 	if len(m[0][4]) <= 0 {
-		Debugf("Default Title: %s: failed to parse stage 3", path)
+		Debugf("Blog Tuple: %s: failed to parse stage 3", path)
 		return BlogTuple{}, false
 	}
 
@@ -170,6 +170,7 @@ func NewBlogTuple(path, targetExt string) (BlogTuple, bool) {
 	title = strings.Replace(title, "_", " ", -1)
 	title = strings.ToTitle(string(title[0])) + title[1:]
 
+	Debugf("Blog Tuple: %s: OK", path)
 	return BlogTuple{
 		Year:     int(yyyy),
 		Month:    int(mm),
@@ -183,7 +184,7 @@ func (bt BlogTuple) DateString() string {
 	return fmt.Sprintf("%04d %02d %02d", bt.Year, bt.Month, bt.Day)
 }
 
-func (bt BlogTuple) TargetFile(baseDir string) string {
+func (bt BlogTuple) TargetFileFor(baseDir string) string {
 	return filepath.Join(
 		baseDir,
 		fmt.Sprintf("%04d", bt.Year),
@@ -193,19 +194,19 @@ func (bt BlogTuple) TargetFile(baseDir string) string {
 	)
 }
 
-func (bt BlogTuple) Redirects(baseDir string) []string {
-	uniques := map[string]struct{}{}
+func (bt BlogTuple) RedirectFromURLs(baseDir string) []string {
+	uniqueFiles := map[string]struct{}{}
 	for _, yearFmt := range []string{"%d", "%04d"} {
 		for _, monthFmt := range []string{"%d", "%02d"} {
 			for _, dayFmt := range []string{"%d", "%02d"} {
-				uniques[filepath.Join(
+				uniqueFiles[filepath.Join(
 					baseDir,
 					fmt.Sprintf(yearFmt, bt.Year),
 					fmt.Sprintf(monthFmt, bt.Month),
 					fmt.Sprintf(dayFmt, bt.Day),
 					fmt.Sprintf(bt.Filename),
 				)] = struct{}{}
-				uniques[filepath.Join(
+				uniqueFiles[filepath.Join(
 					baseDir,
 					fmt.Sprintf(yearFmt, bt.Year),
 					fmt.Sprintf(monthFmt, bt.Month),
@@ -215,13 +216,14 @@ func (bt BlogTuple) Redirects(baseDir string) []string {
 			}
 		}
 	}
-	delete(uniques, bt.TargetFile(baseDir))
+	delete(uniqueFiles, bt.TargetFileFor(baseDir))
 
-	redirects := []string{}
-	for unique := range uniques {
-		redirects = append(redirects, unique)
+	redirectFromUrls := []string{}
+	for uniqueFile := range uniqueFiles {
+		redirectFromUrl := "/" + Relative(*targetDir, uniqueFile)
+		redirectFromUrls = append(redirectFromUrls, redirectFromUrl)
 	}
-	return redirects
+	return redirectFromUrls
 }
 
 func RedirectTo(url string) []byte {

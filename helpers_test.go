@@ -95,7 +95,7 @@ func TestMustJSON(t *testing.T) {
 	}
 }
 
-func TestTargetFor(t *testing.T) {
+func TestTargetFileFor(t *testing.T) {
 	type tuple struct{ relativePath, ext string }
 	for src, expected := range map[tuple]string{
 		tuple{"/foo", ""}:            *targetDir + "/foo",
@@ -106,7 +106,7 @@ func TestTargetFor(t *testing.T) {
 		tuple{"/a/b/c.php", ".html"}: *targetDir + "/a/b/c.html",
 	} {
 		path, ext := *sourceDir+src.relativePath, src.ext
-		got := TargetFor(path, ext)
+		got := TargetFileFor(path, ext)
 		if expected != got {
 			t.Errorf("%s: expected '%s', got '%s'", path, expected, got)
 		}
