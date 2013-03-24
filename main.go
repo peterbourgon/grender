@@ -99,8 +99,14 @@ func GatherSource(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc
 				"target":  Relative(*targetDir, TargetFor(path, ".html")),
 				"url":     "/" + Relative(*targetDir, TargetFor(path, ".html")),
 				"sortkey": filepath.Base(path),
-				"title":   DefaultTitle(path),
-				"date":    DefaultDate(path),
+			}
+			if blogTuple, ok := NewBlogTuple(path, ".html"); ok {
+				Debugf("'%s' -> BlogTuple: %s", path, blogTuple.TargetFile(*targetDir))
+				defaultMetadata["title"] = blogTuple.Title
+				defaultMetadata["date"] = blogTuple.DateString()
+				defaultMetadata["target"] = blogTuple.TargetFile(*targetDir)
+				defaultMetadata["url"] = "/" + Relative(*targetDir, blogTuple.TargetFile(*targetDir))
+				defaultMetadata["redirects"] = blogTuple.Redirects(*targetDir)
 			}
 			fileMetadata := map[string]interface{}{}
 			fileMetadataBuf, _ := splitMetadata(Read(path))
@@ -153,9 +159,20 @@ func Transform(s StackReader) filepath.WalkFunc {
 			templatePath, templateBuf := Template(s, path)
 			outputBuf := RenderTemplate(templatePath, templateBuf, metadata)
 
-			// write
-			dst := TargetFor(path, ".html")
+			// write file
+			dst, _ := metadata["target"].(string)
 			Write(dst, outputBuf)
+
+			// write redirects
+			if redirectsInterface, ok := metadata["redirects"]; ok {
+				url, _ := metadata["url"].(string)
+				redirects, _ := redirectsInterface.([]string)
+				for _, redirect := range redirects {
+					Write(redirect, RedirectTo(url))
+				}
+			}
+
+			// done
 			Debugf("%s transformed to %s", path, dst)
 
 		case ".source", ".template":

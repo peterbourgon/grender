@@ -146,9 +146,9 @@ func TestDefaultTitle(t *testing.T) {
 	for path, expected := range map[string]string{
 		"2013-01-01-foo-bar-baz.md":    "Foo bar baz",
 		"/foo/2013-1-2-foo_bar-baz.md": "Foo bar baz",
-		"a/2013-a-b-foo-bar-baz":       "",
 	} {
-		if got := DefaultTitle(path); expected != got {
+		bt, _ := NewBlogTuple(path, ".html")
+		if got := bt.Title; expected != got {
 			t.Errorf("'%s': expected '%s', got '%s'", path, expected, got)
 		}
 	}
@@ -158,9 +158,9 @@ func TestDefaultDate(t *testing.T) {
 	for path, expected := range map[string]string{
 		"2013-01-01-foo-bar-baz.md":    "2013 01 01",
 		"/foo/2013-1-2-foo_bar-baz.md": "2013 01 02",
-		"a/2013-a-b-foo-bar-baz":       "",
 	} {
-		if got := DefaultDate(path); expected != got {
+		bt, _ := NewBlogTuple(path, ".html")
+		if got := bt.DateString(); expected != got {
 			t.Errorf("'%s': expected '%s', got '%s'", path, expected, got)
 		}
 	}

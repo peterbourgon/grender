@@ -61,11 +61,11 @@ func ParseJSON(buf []byte) map[string]interface{} {
 }
 
 // TargetFor returns the target filename for the given source filename.
-func TargetFor(sourceFilename, ext string) string {
+func TargetFor(sourceFilename, targetExt string) string {
 	relativePath := Relative(*sourceDir, sourceFilename)
 	dst := filepath.Clean(filepath.Join(*targetDir, relativePath))
 	n := len(dst) - len(filepath.Ext(dst))
-	return dst[:n] + ext
+	return dst[:n] + targetExt
 }
 
 // MaybeTemplate returns the contents of the template file specified under the
@@ -114,67 +114,125 @@ var (
 	BlogEntryRegexp = regexp.MustCompile(`^([0-9]+)-([0-9]+)-([0-9]+)-(.*)\.[^\.]*$`)
 )
 
-func DefaultTitle(path string) string {
-	path = filepath.Base(path)
-	m := BlogEntryRegexp.FindAllStringSubmatch(path, -1)
-	if len(m) <= 0 {
-		Debugf("Default Title: %s: failed to parse stage 0", path)
-		return ""
-	}
-	if len(m[0]) <= 0 {
-		Debugf("Default Title: %s: failed to parse stage 1", path)
-		return ""
-	}
-	if len(m[0][4]) <= 0 {
-		Debugf("Default Title: %s: failed to parse stage 2", path)
-		return ""
-	}
-
-	title := m[0][4]
-	title = strings.Replace(title, "-", " ", -1)
-	title = strings.Replace(title, "_", " ", -1)
-	title = strings.ToTitle(string(title[0])) + title[1:]
-	Debugf("Default Title: %s: %s", path, title)
-	return title
+type BlogTuple struct {
+	Year     int
+	Month    int
+	Day      int
+	Title    string
+	Filename string
 }
 
-func DefaultDate(path string) string {
+func NewBlogTuple(path, targetExt string) (BlogTuple, bool) {
 	path = filepath.Base(path)
 	m := BlogEntryRegexp.FindAllStringSubmatch(path, -1)
+
 	if len(m) <= 0 {
-		Debugf("Default Date: %s: failed to parse stage 0", path)
-		return ""
+		Debugf("Blog Tuple: %s: failed to parse stage 0", path)
+		return BlogTuple{}, false
 	}
+
 	if len(m[0]) < 5 {
 		Debugf("Default Date: %s: failed to parse stage 1", path)
-		return ""
+		return BlogTuple{}, false
 	}
+
 	if len(m[0][1]) <= 0 || len(m[0][2]) <= 0 || len(m[0][3]) <= 0 {
 		Debugf("Default Date: %s: failed to parse stage 2", path)
-		return ""
+		return BlogTuple{}, false
 	}
 
 	yyyy, err := strconv.ParseInt(m[0][1], 10, 32)
 	if err != nil {
 		Debugf("Default Date: %s: bad year '%s'", path, m[1])
-		return ""
+		return BlogTuple{}, false
 	}
 
 	mm, err := strconv.ParseInt(m[0][2], 10, 32)
 	if err != nil {
 		Debugf("Default Date: %s: bad month '%s'", path, m[2])
-		return ""
+		return BlogTuple{}, false
 	}
 
 	dd, err := strconv.ParseInt(m[0][3], 10, 32)
 	if err != nil {
 		Debugf("Default Date: %s: bad day '%s'", path, m[3])
-		return ""
+		return BlogTuple{}, false
 	}
 
-	date := fmt.Sprintf("%d %02d %02d", yyyy, mm, dd)
-	Debugf("Default Date: %s: %s", path, date)
-	return date
+	if len(m[0][4]) <= 0 {
+		Debugf("Default Title: %s: failed to parse stage 3", path)
+		return BlogTuple{}, false
+	}
+
+	filename := m[0][4]
+	title := filename
+	title = strings.Replace(title, "-", " ", -1)
+	title = strings.Replace(title, "_", " ", -1)
+	title = strings.ToTitle(string(title[0])) + title[1:]
+
+	return BlogTuple{
+		Year:     int(yyyy),
+		Month:    int(mm),
+		Day:      int(dd),
+		Title:    title,
+		Filename: filename + targetExt,
+	}, true
+}
+
+func (bt BlogTuple) DateString() string {
+	return fmt.Sprintf("%04d %02d %02d", bt.Year, bt.Month, bt.Day)
+}
+
+func (bt BlogTuple) TargetFile(baseDir string) string {
+	return filepath.Join(
+		baseDir,
+		fmt.Sprintf("%04d", bt.Year),
+		fmt.Sprintf("%02d", bt.Month),
+		fmt.Sprintf("%02d", bt.Day),
+		bt.Filename,
+	)
+}
+
+func (bt BlogTuple) Redirects(baseDir string) []string {
+	uniques := map[string]struct{}{}
+	for _, yearFmt := range []string{"%d", "%04d"} {
+		for _, monthFmt := range []string{"%d", "%02d"} {
+			for _, dayFmt := range []string{"%d", "%02d"} {
+				uniques[filepath.Join(
+					baseDir,
+					fmt.Sprintf(yearFmt, bt.Year),
+					fmt.Sprintf(monthFmt, bt.Month),
+					fmt.Sprintf(dayFmt, bt.Day),
+					fmt.Sprintf(bt.Filename),
+				)] = struct{}{}
+				uniques[filepath.Join(
+					baseDir,
+					fmt.Sprintf(yearFmt, bt.Year),
+					fmt.Sprintf(monthFmt, bt.Month),
+					fmt.Sprintf(dayFmt, bt.Day),
+					"index.html",
+				)] = struct{}{}
+			}
+		}
+	}
+	delete(uniques, bt.TargetFile(baseDir))
+
+	redirects := []string{}
+	for unique := range uniques {
+		redirects = append(redirects, unique)
+	}
+	return redirects
+}
+
+func RedirectTo(url string) []byte {
+	return []byte(fmt.Sprintf(
+		`
+		<html><head>
+		<meta http-equiv="refresh" content="0;url=%s">
+		</head><body></body></html>
+		`,
+		url,
+	))
 }
 
 // SplatInto splits the `path` on filepath.Separator, and merges the passed
