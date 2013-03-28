@@ -118,7 +118,32 @@ In your template, you can do:
 ```
 
 (`url` is a special key that grender autopopulates in the Global Key space for
-every rendered file.) See [the example][06].
+every rendered file.) And what if you only want to list *most* of the files in
+the "blog" directory? You can create `blog/default.json`:
+
+```
+{ "list": true }
+```
+
+And for the pages you don't want to include:
+
+```
+{ "list": false }
+---
+Content here
+```
+
+Then, in your template:
+
+```
+{{ range .files.blog }}
+  {{ if .list }}
+    <a href="{{ .url }}">{{ .title }}</a>
+  {{ end }}
+{{ end }}
+```
+
+See [the complete example][06].
 
 [06]: http://github.com/peterbourgon/grender/blob/grender-2/examples/06-basic-blog
 
