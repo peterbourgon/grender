@@ -106,10 +106,10 @@ Given 2013-03-04-foo-bar-baz.md:
 * default target file is 2013/03/04/foo-bar-baz.html (relative to source)
 * http-equiv refresh redirects to the target URL are written for all of the 
   following relative URLs:
-** 2013/03/04/index.html
-** 2013/03/4/index.html
-** 2013/3/04/index.html
-** 2013/3/4/index.html
+* * 2013/03/04/index.html
+* * 2013/03/4/index.html
+* * 2013/3/04/index.html
+* * 2013/3/4/index.html
 
 
 ### Discovering other files and metadata
