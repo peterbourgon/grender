@@ -102,7 +102,7 @@ grender will treat that file as a "blog entry", and perform special behavior.
 Given 2013-03-04-foo-bar-baz.md:
 
 * default metadata key **title**, value "Foo bar baz"
-* default metadata key **date**, value "2013 03 28"
+* default metadata key **date**, value "2013 03 04"
 * default target file is 2013/03/04/foo-bar-baz.html (relative to source)
 * http-equiv refresh redirects to the target URL are written for all of the 
   following relative URLs: 2013/03/04/index.html, 2013/03/4/index.html,
