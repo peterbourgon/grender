@@ -3,11 +3,12 @@ package main
 import (
 	"bytes"
 	"flag"
-	"github.com/peterbourgon/mergemap"
-	"github.com/russross/blackfriday"
 	"html/template"
 	"os"
 	"path/filepath"
+
+	"github.com/peterbourgon/mergemap"
+	"github.com/russross/blackfriday"
 )
 
 var (
@@ -226,14 +227,22 @@ func RenderTemplate(path string, input []byte, metadata map[string]interface{}) 
 
 func RenderMarkdown(input []byte) []byte {
 	Debugf("rendering %d byte(s) of Markdown", len(input))
+
 	htmlOptions := 0
-	htmlOptions = htmlOptions | blackfriday.HTML_GITHUB_BLOCKCODE
-	htmlOptions = htmlOptions | blackfriday.HTML_USE_SMARTYPANTS
+	htmlOptions |= blackfriday.HTML_GITHUB_BLOCKCODE
+	htmlOptions |= blackfriday.HTML_USE_SMARTYPANTS
 	title, css := "", ""
 	htmlRenderer := blackfriday.HtmlRenderer(htmlOptions, title, css)
 
-	mdOptions := 0
-	mdOptions = mdOptions | blackfriday.EXTENSION_FENCED_CODE
+	extensions := 0
+	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
+	extensions |= blackfriday.EXTENSION_TABLES
+	extensions |= blackfriday.EXTENSION_FENCED_CODE
+	extensions |= blackfriday.EXTENSION_AUTOLINK
+	extensions |= blackfriday.EXTENSION_STRIKETHROUGH
+	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
+	extensions |= blackfriday.EXTENSION_FOOTNOTES
+	extensions |= blackfriday.EXTENSION_LAX_HTML_BLOCKS
 
-	return blackfriday.Markdown(input, htmlRenderer, mdOptions)
+	return blackfriday.Markdown(input, htmlRenderer, extensions)
 }
