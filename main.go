@@ -229,7 +229,6 @@ func RenderMarkdown(input []byte) []byte {
 	Debugf("rendering %d byte(s) of Markdown", len(input))
 
 	htmlOptions := 0
-	htmlOptions |= blackfriday.HTML_GITHUB_BLOCKCODE
 	htmlOptions |= blackfriday.HTML_USE_SMARTYPANTS
 	title, css := "", ""
 	htmlRenderer := blackfriday.HtmlRenderer(htmlOptions, title, css)
