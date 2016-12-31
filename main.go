@@ -154,8 +154,13 @@ func Transform(s StackReader) filepath.WalkFunc {
 			_, contentBuf := splitMetadata(Read(path))
 
 			// render
-			metadata := mergemap.Merge(s.Get(path), map[string]interface{}{
-				"content": template.HTML(RenderMarkdown(contentBuf)),
+			var htmlBits, extensionBits int
+			metadata := s.Get(path)
+			if v, ok := metadata["toc"]; ok && v.(bool) {
+				htmlBits |= blackfriday.HTML_TOC
+			}
+			metadata = mergemap.Merge(metadata, map[string]interface{}{
+				"content": template.HTML(RenderMarkdown(contentBuf, htmlBits, extensionBits)),
 			})
 			templatePath, templateBuf := Template(s, path)
 			outputBuf := RenderTemplate(templatePath, templateBuf, metadata)
@@ -225,15 +230,15 @@ func RenderTemplate(path string, input []byte, metadata map[string]interface{}) 
 	return output.Bytes()
 }
 
-func RenderMarkdown(input []byte) []byte {
+func RenderMarkdown(input []byte, htmlBits, extensionBits int) []byte {
 	Debugf("rendering %d byte(s) of Markdown", len(input))
 
-	htmlOptions := 0
+	htmlOptions := htmlBits // default
 	htmlOptions |= blackfriday.HTML_USE_SMARTYPANTS
 	title, css := "", ""
 	htmlRenderer := blackfriday.HtmlRenderer(htmlOptions, title, css)
 
-	extensions := 0
+	extensions := extensionBits // default
 	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
 	extensions |= blackfriday.EXTENSION_TABLES
 	extensions |= blackfriday.EXTENSION_FENCED_CODE
@@ -242,6 +247,8 @@ func RenderMarkdown(input []byte) []byte {
 	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
 	extensions |= blackfriday.EXTENSION_FOOTNOTES
 	extensions |= blackfriday.EXTENSION_LAX_HTML_BLOCKS
+	extensions |= blackfriday.EXTENSION_HEADER_IDS
+	extensions |= blackfriday.EXTENSION_AUTO_HEADER_IDS
 
 	return blackfriday.Markdown(input, htmlRenderer, extensions)
 }

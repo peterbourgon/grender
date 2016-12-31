@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/peterbourgon/mergemap"
 	"path/filepath"
+
+	"github.com/peterbourgon/mergemap"
 )
 
 type StackReader interface {
