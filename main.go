@@ -159,8 +159,9 @@ func Transform(s StackReader) filepath.WalkFunc {
 			if v, ok := metadata["toc"]; ok && v.(bool) {
 				htmlBits |= blackfriday.HTML_TOC
 			}
+			md := RenderTemplate(path, contentBuf, metadata)
 			metadata = mergemap.Merge(metadata, map[string]interface{}{
-				"content": template.HTML(RenderMarkdown(contentBuf, htmlBits, extensionBits)),
+				"content": template.HTML(RenderMarkdown(md, htmlBits, extensionBits)),
 			})
 			templatePath, templateBuf := Template(s, path)
 			outputBuf := RenderTemplate(templatePath, templateBuf, metadata)
