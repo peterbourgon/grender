@@ -215,6 +215,9 @@ func RenderTemplate(path string, input []byte, metadata map[string]interface{}) 
 		"importcss":  importcss,
 		"importjs":   importjs,
 		"sorted":     SortedValues,
+		"relative": func(s string) string {
+			return Relative(filepath.Dir(metadata["url"].(string)), s)
+		},
 	}
 
 	tmpl, err := template.New(templateName).Funcs(funcMap).Parse(string(input))
