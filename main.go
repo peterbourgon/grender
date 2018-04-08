@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/peterbourgon/mergemap"
 	"github.com/russross/blackfriday"
@@ -127,6 +128,10 @@ func GatherSource(s StackReadWriter, m map[string]interface{}) filepath.WalkFunc
 func Transform(s StackReader) filepath.WalkFunc {
 	Debugf("transforming")
 	return func(path string, info os.FileInfo, _ error) error {
+		if strings.HasPrefix(filepath.Base(path), ".") {
+			Debugf("skip hidden file %s", path)
+			return nil
+		}
 		if info.IsDir() {
 			Debugf("descending into %s", path)
 			return nil // descend
