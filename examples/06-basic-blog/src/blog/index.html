@@ -11,7 +11,7 @@
 <ul>
 {{ range sorted .files.blog }}
 	{{ if .entry }}
-		<li><a href="{{ .url }}">{{ .title }}</a></li>
+		<li><a href="{{ relative .url }}">{{ .title }}</a></li>
 	{{ end }}
 {{ end }}
 </ul>
