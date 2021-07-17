@@ -1,0 +1,4 @@
+github.com/peterbourgon/mergemap v0.0.0-20130613134717-e21c03b7a721 h1:ArxMo6jAOO2KuRsepZ0hTaH4hZCi2CCW4P9PV59HHH0=
+github.com/peterbourgon/mergemap v0.0.0-20130613134717-e21c03b7a721/go.mod h1:jQyRpOpE/KbvPc0VKXjAqctYglwUO5W6zAcGcFfbvlo=
+github.com/russross/blackfriday v1.6.0 h1:KqfZb0pUVN2lYqZUYRddxF4OR8ZMURnJIG5Y3VRLtww=
+github.com/russross/blackfriday v1.6.0/go.mod h1:ti0ldHuxg49ri4ksnFxlkCfN+hvslNlmVHqNRXXJNAY=
